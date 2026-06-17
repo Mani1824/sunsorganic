@@ -603,7 +603,6 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
       <div class="ad-nav" onclick="switchTab('origins')" id="nav-origins"><span>&#127757;</span> Origin Maps</div>
       <div class="ad-nav" onclick="switchTab('why')" id="nav-why"><span>&#128200;</span> Price Story</div>
       <div class="ad-nav" onclick="switchTab('offers')" id="nav-offers"><span>&#127809;</span> Offers &amp; Combos</div>
-      <div class="ad-nav" onclick="switchTab('offers')" id="nav-offers"><span>&#127809;</span> Offers &amp; Combos</div>
     </div>
     <div class="ad-main">
       <div class="ad-tab on" id="tab-overview">
@@ -1652,47 +1651,157 @@ function addOfferToCart(offerId){
 function buildOffersAdmin(){
   const grid=document.getElementById('offers-admin-grid');
   if(!grid)return;
+  // Also restore saved header values
+  try{
+    const h=JSON.parse(localStorage.getItem('sunsa_offers_header')||'{}');
+    if(h.banner&&document.getElementById('off-banner')){
+      document.getElementById('off-banner').value=h.banner;
+      previewBanner(h.banner);
+    }
+    if(h.eyebrow&&document.getElementById('off-eyebrow'))document.getElementById('off-eyebrow').value=h.eyebrow;
+    if(h.title&&document.getElementById('off-sec-title'))document.getElementById('off-sec-title').value=h.title;
+    if(h.sub&&document.getElementById('off-sec-sub'))document.getElementById('off-sec-sub').value=h.sub;
+  }catch(e){}
+
   grid.innerHTML=offers.map((o,idx)=>{
     const saved=o.originalPriceNum&&o.priceNum?Math.round((1-o.priceNum/o.originalPriceNum)*100):0;
-    return `<div class="offer-admin-card">
-      <div class="oa-num">Offer #${idx+1}</div>
-      <div class="offer-status-toggle">
-        <label>Active on website</label>
-        <label class="toggle-sw">
-          <input type="checkbox" ${o.active?'checked':''} onchange="toggleOfferActive(${o.id},this.checked)">
-          <div class="toggle-track"></div>
-        </label>
-      </div>
-      <div class="af">
-        <label>Offer Image URL</label>
-        <div class="ad-img-preview" id="offer-img-prev-${o.id}">
-          ${o.img?`<img src="${o.img}" style="display:block" alt="">`:`<span style="font-size:2rem">${o.emoji}</span>`}
-          <span class="preview-hint">Offer image</span>
+    return `<div class="offer-admin-card" style="position:relative">
+      <!-- Header row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid #1a2e16">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:38px;height:38px;border-radius:8px;background:#0a1208;
+            display:flex;align-items:center;justify-content:center;font-size:1.3rem">${o.emoji}</div>
+          <div>
+            <div style="color:var(--cream);font-weight:700;font-size:.88rem">${o.name}</div>
+            <div style="color:#3a4e36;font-size:.7rem;margin-top:1px">
+              ${saved>0?`Save ${saved}% &middot; `:''}${o.active?'&#9989; Live on site':'&#10060; Hidden'}
+            </div>
+          </div>
         </div>
-        <input id="oa-img-${o.id}" value="${o.img||''}" placeholder="https://...jpg" oninput="previewOfferImg(${o.id},this.value)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:.66rem;color:#3a4e36">Active</span>
+          <label class="toggle-sw">
+            <input type="checkbox" ${o.active?'checked':''} onchange="toggleOfferActive(${o.id},this.checked)">
+            <div class="toggle-track"></div>
+          </label>
+        </div>
       </div>
+
+      <!-- IMAGE -->
+      <div class="af">
+        <label>&#128247; Offer Banner Image URL</label>
+        <div style="width:100%;height:120px;border-radius:8px;overflow:hidden;background:#080e05;
+          border:1.5px solid #1a2e16;margin-bottom:7px;display:flex;align-items:center;
+          justify-content:center;position:relative" id="offer-img-prev-${o.id}">
+          ${o.img
+            ?`<img src="${o.img}" style="width:100%;height:100%;object-fit:cover" alt=""
+                onerror="this.parentElement.innerHTML='<span style=font-size:2rem>${o.emoji}</span>'">`
+            :`<span style="font-size:2.5rem">${o.emoji}</span>`}
+        </div>
+        <input id="oa-img-${o.id}" value="${o.img||''}"
+          placeholder="https://mani1824.github.io/sunsorganic/offer1.jpg"
+          oninput="previewOfferImg(${o.id},this.value)"
+          style="width:100%;padding:8px 11px;border:1.5px solid #1a2e16;border-radius:8px;
+          font-size:.8rem;background:#080e05;color:#bbb;outline:none">
+      </div>
+
+      <!-- NAME + RIBBON -->
       <div class="af-row">
-        <div class="af"><label>Offer Name</label><input id="oa-name-${o.id}" value="${o.name}"></div>
-        <div class="af"><label>Ribbon Label</label><input id="oa-ribbon-${o.id}" value="${o.ribbon||''}" placeholder="e.g. Best Value"></div>
+        <div class="af"><label>Offer / Product Name</label>
+          <input id="oa-name-${o.id}" value="${o.name}" placeholder="e.g. Summer Trio Pack"></div>
+        <div class="af"><label>Ribbon Badge</label>
+          <input id="oa-ribbon-${o.id}" value="${o.ribbon||''}" placeholder="Best Value / New / Hot"></div>
       </div>
-      <div class="af"><label>Description</label><textarea id="oa-desc-${o.id}">${o.desc}</textarea></div>
-      <div class="af"><label>Items Included (comma separated)</label>
-        <input id="oa-items-${o.id}" value="${o.items.join(', ')}" placeholder="Ground Nut Oil, Coconut Oil"></div>
+
+      <!-- DESCRIPTION -->
+      <div class="af"><label>Description (shown on card)</label>
+        <textarea id="oa-desc-${o.id}" style="min-height:60px">${o.desc}</textarea></div>
+
+      <!-- PRODUCTS / ITEMS INCLUDED -->
+      <div class="af">
+        <label>&#128717; Products Included (comma separated)</label>
+        <input id="oa-items-${o.id}" value="${o.items.join(', ')}"
+          placeholder="Ground Nut Oil 1L, Coconut Oil 1L, Sesame Oil 1L"
+          style="width:100%;padding:8px 11px;border:1.5px solid #1a2e16;border-radius:8px;
+          font-size:.8rem;background:#080e05;color:#bbb;outline:none">
+        <div style="font-size:.65rem;color:#3a4e36;margin-top:4px">
+          These show as tag chips on the offer card
+        </div>
+      </div>
+
+      <!-- PRICING -->
+      <div style="background:#080e05;border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid #1a2e16">
+        <div style="font-size:.66rem;color:#6a7a66;text-transform:uppercase;letter-spacing:.1em;
+          font-weight:700;margin-bottom:10px">&#128176; Pricing</div>
+        <div class="af-row">
+          <div class="af"><label>Offer Price (&#8377;)</label>
+            <input type="number" id="oa-price-${o.id}" value="${o.priceNum}"
+              placeholder="950" oninput="updateSaveBadge(${o.id})"></div>
+          <div class="af"><label>Original / MRP (&#8377;)</label>
+            <input type="number" id="oa-orig-${o.id}" value="${o.originalPriceNum||''}"
+              placeholder="1060 (for discount %)" oninput="updateSaveBadge(${o.id})"></div>
+        </div>
+        <div id="save-badge-${o.id}" style="font-size:.75rem;color:var(--goldb);font-weight:700;min-height:16px">
+          ${saved>0?`&#9989; Customer saves ${saved}% on this offer`:''}
+        </div>
+      </div>
+
+      <!-- TAGS + TIMER -->
       <div class="af-row">
-        <div class="af"><label>Price (&#8377;)</label><input type="number" id="oa-price-${o.id}" value="${o.priceNum}"></div>
-        <div class="af"><label>Original Price (&#8377;)</label><input type="number" id="oa-orig-${o.id}" value="${o.originalPriceNum||''}"></div>
+        <div class="af"><label>Tag Badge</label>
+          <input id="oa-tag-${o.id}" value="${o.tag||''}" placeholder="Seasonal Combo"></div>
+        <div class="af"><label>Timer / Urgency Text</label>
+          <input id="oa-timer-${o.id}" value="${o.timer||''}" placeholder="Limited Stock"></div>
       </div>
-      <div class="af-row">
-        <div class="af"><label>Tag Badge</label><input id="oa-tag-${o.id}" value="${o.tag||''}" placeholder="Seasonal Combo"></div>
-        <div class="af"><label>Timer Text</label><input id="oa-timer-${o.id}" value="${o.timer||''}" placeholder="Limited Stock"></div>
-      </div>
-      <div class="af"><label>Emoji (fallback)</label><input id="oa-emoji-${o.id}" value="${o.emoji}" maxlength="3"></div>
-      <div style="display:flex;gap:8px;margin-top:4px">
-        <button class="ad-save" onclick="saveOffer(${o.id})" style="flex:2">&#128190; Save Offer</button>
-        <button class="ad-save secondary" onclick="deleteOffer(${o.id})" style="flex:1;background:rgba(184,68,68,.12);border-color:#b84444;color:#e07070">&#128465; Delete</button>
+
+      <!-- EMOJI -->
+      <div class="af"><label>Emoji (fallback icon)</label>
+        <input id="oa-emoji-${o.id}" value="${o.emoji}" maxlength="3" style="width:80px"></div>
+
+      <!-- SAVE + DELETE -->
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="ad-save" onclick="saveOffer(${o.id})" style="flex:3">
+          &#128190; Save Offer
+        </button>
+        <button onclick="deleteOffer(${o.id})"
+          style="flex:1;padding:11px;background:rgba(184,68,68,.1);border:1.5px solid #b84444;
+          color:#e07070;border-radius:9px;cursor:pointer;font-size:.8rem;font-weight:700;
+          font-family:Inter,sans-serif;transition:all .2s"
+          onmouseover="this.style.background='rgba(184,68,68,.25)'"
+          onmouseout="this.style.background='rgba(184,68,68,.1)'">
+          &#128465;
+        </button>
       </div>
     </div>`;
   }).join('');
+}
+
+function updateSaveBadge(id){
+  const p=parseFloat(document.getElementById('oa-price-'+id)?.value)||0;
+  const orig=parseFloat(document.getElementById('oa-orig-'+id)?.value)||0;
+  const el=document.getElementById('save-badge-'+id);
+  if(!el)return;
+  if(orig>0&&p>0&&orig>p){
+    const pct=Math.round((1-p/orig)*100);
+    el.innerHTML=`&#9989; Customer saves ${pct}% on this offer`;
+  } else {
+    el.innerHTML='';
+  }
+}
+
+function previewBanner(url){
+  const el=document.getElementById('banner-prev');
+  const bannerImg=document.getElementById('offers-banner-img');
+  if(url){
+    if(el)el.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px"
+      onerror="this.parentElement.innerHTML='<span style=font-size:1.5rem;opacity:.3>&#10060;</span><span style=font-size:.65rem;color:#e07070;position:absolute;bottom:5px>Image not found</span>'">`;
+    if(bannerImg){bannerImg.src=url;bannerImg.style.display='block';}
+  } else {
+    if(el)el.innerHTML=`<span style="font-size:1.5rem;opacity:.3">&#127775;</span>
+      <span style="position:absolute;bottom:5px;font-size:.62rem;color:#3a4e36;letter-spacing:.06em;text-transform:uppercase">Banner preview</span>`;
+    if(bannerImg)bannerImg.style.display='none';
+  }
 }
 
 function addNewOffer(){
@@ -1759,14 +1868,62 @@ async function saveOfferToFirebase(o){
 }
 
 function saveOffersHeader(){
-  const t=document.getElementById('off-sec-title').value;
-  const s=document.getElementById('off-sec-sub').value;
-  const el=document.getElementById('offers-title');
-  const el2=document.getElementById('offers-subtitle');
-  if(el)el.textContent=t;
-  if(el2)el2.textContent=s;
-  try{localStorage.setItem('sunsa_offers_header',JSON.stringify({title:t,sub:s}));}catch(e){}
-  toast('&#9989; Offers header saved!');
+  const banner=document.getElementById('off-banner')?.value||'';
+  const eyebrow=document.getElementById('off-eyebrow')?.value||'Limited Time';
+  const t=document.getElementById('off-sec-title')?.value||'';
+  const s=document.getElementById('off-sec-sub')?.value||'';
+
+  // Apply to page immediately
+  const bannerImg=document.getElementById('offers-banner-img');
+  if(bannerImg){
+    if(banner){bannerImg.src=banner;bannerImg.style.display='block';}
+    else bannerImg.style.display='none';
+  }
+  const eyebrowEl=document.getElementById('offers-eyebrow');
+  if(eyebrowEl)eyebrowEl.textContent=eyebrow;
+  const titleEl=document.getElementById('offers-title');
+  if(titleEl)titleEl.textContent=t;
+  const subEl=document.getElementById('offers-subtitle');
+  if(subEl)subEl.textContent=s;
+
+  // Save to localStorage
+  const data={banner,eyebrow,title:t,sub:s};
+  try{localStorage.setItem('sunsa_offers_header',JSON.stringify(data));}catch(e){}
+
+  // Save to Firestore so all users see it
+  try{firebase.firestore().collection('settings').doc('offersHeader').set(data);}catch(e){}
+
+  toast('&#9989; Banner & header saved for all users!');
+}
+
+// Load offers header on page load
+function loadOffersHeader(){
+  // From localStorage first
+  try{
+    const h=JSON.parse(localStorage.getItem('sunsa_offers_header')||'{}');
+    applyOffersHeader(h);
+  }catch(e){}
+  // Then from Firestore
+  try{
+    firebase.firestore().collection('settings').doc('offersHeader').get().then(doc=>{
+      if(doc.exists){
+        applyOffersHeader(doc.data());
+        try{localStorage.setItem('sunsa_offers_header',JSON.stringify(doc.data()));}catch(e){}
+      }
+    });
+  }catch(e){}
+}
+
+function applyOffersHeader(h){
+  if(!h)return;
+  const bannerImg=document.getElementById('offers-banner-img');
+  if(bannerImg&&h.banner){bannerImg.src=h.banner;bannerImg.style.display='block';}
+  const eyebrowEl=document.getElementById('offers-eyebrow');
+  if(eyebrowEl&&h.eyebrow)eyebrowEl.textContent=h.eyebrow;
+  const titleEl=document.getElementById('offers-title');
+  if(titleEl&&h.title)titleEl.textContent=h.title;
+  const subEl=document.getElementById('offers-subtitle');
+  if(subEl&&h.sub)subEl.textContent=h.sub;
 }
 
 function loadOffersFromFirebase(){
@@ -1794,6 +1951,7 @@ loadBranding();
 loadOffersLocally();
 loadOffersFromFirebase();
 renderOffers();
+loadOffersHeader();
 </script>
 
 <script>
