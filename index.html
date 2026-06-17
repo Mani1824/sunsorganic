@@ -682,23 +682,45 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
       <!-- OFFERS TAB -->
       <div class="ad-tab" id="tab-offers">
         <div class="ad-title"><span class="ad-title-icon">&#127809;</span> Seasonal Offers &amp; Combos</div>
-        <div class="ad-info-box" style="margin-bottom:20px">
-          <strong>How it works:</strong> Add up to 6 offer/combo cards shown on the website with image, price and discount.<br>
-          <span class="tip">Toggle Active/Inactive to show or hide any offer instantly. Changes save to Firestore.</span>
-        </div>
-        <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
-          <button class="ad-save" style="width:auto;padding:10px 20px" onclick="addNewOffer()">&#43; Add New Offer</button>
-          <button class="ad-save secondary" style="width:auto;padding:10px 20px" onclick="buildOffersAdmin()">&#8635; Refresh</button>
-        </div>
-        <div class="ad-box" style="margin-bottom:16px">
-          <div class="ad-box-title">Section Header Text</div>
-          <div class="af-row">
-            <div class="af"><label>Section Title</label><input id="off-sec-title" value="Seasonal Offers &amp; Combos"></div>
-            <div class="af"><label>Subtitle</label><input id="off-sec-sub" value="Handpicked bundles at special prices."></div>
+
+        <!-- BANNER SETTINGS -->
+        <div class="ad-box" style="margin-bottom:18px">
+          <div class="ad-box-title">&#127775; Section Banner &amp; Header</div>
+          <div class="af">
+            <label>Banner Image URL (full-width header image)</label>
+            <div id="banner-prev" style="width:100%;height:100px;border-radius:8px;background:#080e05;
+              border:1.5px solid #1a2e16;overflow:hidden;margin-bottom:8px;display:flex;
+              align-items:center;justify-content:center;position:relative">
+              <span style="font-size:1.5rem;opacity:.3">&#127775;</span>
+              <span style="position:absolute;bottom:5px;font-size:.62rem;color:#3a4e36;
+                letter-spacing:.06em;text-transform:uppercase">Banner preview</span>
+            </div>
+            <input id="off-banner" value="" placeholder="https://mani1824.github.io/sunsorganic/offers-banner.jpg"
+              oninput="previewBanner(this.value)">
           </div>
-          <button class="ad-save" onclick="saveOffersHeader()">&#128190; Save Header</button>
+          <div class="af-row">
+            <div class="af"><label>Eyebrow Text</label>
+              <input id="off-eyebrow" value="Limited Time"></div>
+            <div class="af"><label>Section Title</label>
+              <input id="off-sec-title" value="Seasonal Offers &amp; Combos"></div>
+          </div>
+          <div class="af"><label>Subtitle / Description</label>
+            <input id="off-sec-sub" value="Handpicked bundles at special prices &#8212; for a limited time only."></div>
+          <button class="ad-save" onclick="saveOffersHeader()">&#128190; Save Banner &amp; Header</button>
         </div>
-        <div id="offers-admin-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px"></div>
+
+        <!-- ADD NEW OFFER BUTTON -->
+        <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+          <button class="ad-save" style="width:auto;padding:11px 22px" onclick="addNewOffer()">
+            &#43; Add New Offer / Combo
+          </button>
+          <button class="ad-save secondary" style="width:auto;padding:11px 22px" onclick="buildOffersAdmin()">
+            &#8635; Refresh List
+          </button>
+        </div>
+
+        <!-- OFFERS CARDS -->
+        <div id="offers-admin-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px"></div>
       </div>
       </div>
     </div>
@@ -882,13 +904,29 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
 <!-- SEASONAL OFFERS & COMBO SECTION -->
 <section id="offers">
   <div style="position:relative;z-index:1">
-    <div class="offers-header fade-up">
-      <div>
-        <div class="sec-eyebrow"><div class="sec-eyebrow-line" style="background:var(--goldb)"></div><div class="sec-eyebrow-text">Limited Time</div></div>
-        <h2 class="sec-title" id="offers-title" style="color:#fff">Seasonal Offers &amp; Combos</h2>
-        <p class="sec-sub" id="offers-subtitle" style="color:rgba(255,255,255,.45)">Handpicked bundles at special prices &#8212; for a limited time only.</p>
+    <!-- BANNER IMAGE AREA -->
+    <div id="offers-banner-wrap" style="width:100%;border-radius:20px;overflow:hidden;
+      margin-bottom:50px;position:relative;min-height:160px;display:flex;align-items:center;
+      background:linear-gradient(135deg,rgba(212,160,32,.15),rgba(26,92,42,.25));
+      border:1px solid rgba(212,160,32,.2)">
+      <img id="offers-banner-img" src="" alt="Offers Banner"
+        style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;border-radius:20px">
+      <div id="offers-banner-overlay" style="position:relative;z-index:1;padding:36px 44px;width:100%">
+        <div class="sec-eyebrow fade-up">
+          <div class="sec-eyebrow-line" style="background:var(--goldb)"></div>
+          <div class="sec-eyebrow-text" id="offers-eyebrow" style="color:var(--goldb)">Limited Time</div>
+        </div>
+        <h2 id="offers-title" style="font-family:'Fraunces',serif;font-size:clamp(1.8rem,3vw,2.8rem);
+          color:#fff;font-weight:700;margin-bottom:8px;line-height:1.1">
+          Seasonal Offers &amp; Combos
+        </h2>
+        <p id="offers-subtitle" style="color:rgba(255,255,255,.5);font-size:.92rem;
+          max-width:500px;line-height:1.7">
+          Handpicked bundles at special prices &#8212; for a limited time only.
+        </p>
       </div>
     </div>
+    <!-- OFFERS GRID -->
     <div class="offers-grid" id="offers-grid">
       <div class="offers-empty"><span>&#127807;</span>Loading offers&#8230;</div>
     </div>
@@ -1376,26 +1414,91 @@ async function saveOil(id){
 // ════════════ ADMIN: ORIGIN MAP SHAPES ════════════
 function buildOriginsGrid(){
   document.getElementById('ad-origins-grid').innerHTML=oils.map(o=>`
-    <div class="ad-card">
+    <div class="ad-card" style="border:1px solid #1a2e16">
       <div class="ad-card-top">
         <div class="ad-icon"><span>${o.emoji}</span></div>
         <div>
           <div class="ad-card-name">${o.name}</div>
-          <div class="ad-card-sub">Current: ${shapeNames[o.shape]||o.shape}</div>
+          <div class="ad-card-sub">&#128205; ${o.region}</div>
         </div>
       </div>
-      <div class="af">
-        <label>Select Map Shape</label>
-        <div class="map-shape-grid" id="shape-grid-${o.id}">
+
+      <!-- OPTION 1: Upload a real map image -->
+      <div style="background:#0a1208;border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid #1e3a18">
+        <div style="font-size:.68rem;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">
+          &#128247; Option 1 — Upload Real Map Image (Recommended)
+        </div>
+        <div style="width:100%;height:140px;border-radius:8px;overflow:hidden;background:#080e05;
+          border:1.5px solid #1a2e16;display:flex;align-items:center;justify-content:center;
+          margin-bottom:8px;position:relative" id="mapimg-prev-${o.id}">
+          ${o.mapImg
+            ? `<img src="${o.mapImg}" style="width:100%;height:100%;object-fit:cover" alt=""
+                onerror="this.parentElement.innerHTML='<span style=font-size:2rem>&#128506;</span>'">`
+            : `<span style="font-size:2rem;opacity:.4">&#128506;</span>
+               <span style="position:absolute;bottom:6px;font-size:.62rem;color:#3a4e36;letter-spacing:.06em;text-transform:uppercase">No image set</span>`
+          }
+        </div>
+        <input id="ao-mi-${o.id}" value="${o.mapImg||''}"
+          placeholder="https://mani1824.github.io/sunsorganic/maps/andhra.jpg"
+          oninput="livePreviewMapImg(${o.id},this.value)"
+          style="width:100%;padding:9px 12px;border:1.5px solid #1a2e16;border-radius:8px;
+          font-size:.8rem;background:#080e05;color:#bbb;outline:none;font-family:Fira Mono,monospace">
+        <div style="font-size:.68rem;color:#3a4e36;margin-top:5px;line-height:1.5">
+          &#128161; Upload your map image to GitHub first, then paste the URL above.<br>
+          e.g. <span style="color:#6a8a66">https://mani1824.github.io/sunsorganic/andhra-map.jpg</span>
+        </div>
+      </div>
+
+      <!-- OPTION 2: Choose SVG shape fallback -->
+      <div style="background:#0a1208;border-radius:10px;padding:14px;border:1px solid #1e3a18">
+        <div style="font-size:.68rem;color:#6a7a66;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">
+          &#128313; Option 2 — SVG Shape (Fallback if no image)
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px" id="shape-grid-${o.id}">
           ${Object.entries(shapes).map(([k,v])=>`
-            <div class="map-shape-opt${o.shape===k?' sel':''}" onclick="selectShape(${o.id},'${k}',this)">
+            <div onclick="selectShape(${o.id},'${k}',this)"
+              style="background:${o.shape===k?'rgba(26,92,42,.3)':'#080e05'};
+              border:1.5px solid ${o.shape===k?'var(--sage)':'#1a2e16'};
+              border-radius:8px;padding:6px 4px;text-align:center;cursor:pointer;
+              transition:all .18s;font-size:.66rem;color:${o.shape===k?'#fff':'#4a5e46'}"
+              class="map-shape-opt${o.shape===k?' sel':''}">
               ${v}
-              <div>${shapeNames[k]||k}</div>
+              <div style="margin-top:2px">${shapeNames[k]||k}</div>
             </div>`).join('')}
         </div>
       </div>
-      <button class="ad-save" onclick="saveOilShape(${o.id})">&#128190; Save Map Shape</button>
+
+      <button class="ad-save" onclick="saveOilMapFull(${o.id})" style="margin-top:12px">
+        &#128190; Save Map Settings
+      </button>
     </div>`).join('');
+}
+
+function livePreviewMapImg(id,url){
+  const w=document.getElementById('mapimg-prev-'+id);
+  if(!w)return;
+  if(url){
+    w.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover" alt=""
+      onerror="this.parentElement.innerHTML='<span style=font-size:1.8rem>&#10060;</span><span style=position:absolute;bottom:6px;font-size:.62rem;color:#e07070>Image not found</span>'">`;
+  } else {
+    w.innerHTML=`<span style="font-size:2rem;opacity:.4">&#128506;</span>
+      <span style="position:absolute;bottom:6px;font-size:.62rem;color:#3a4e36;letter-spacing:.06em;text-transform:uppercase">No image set</span>`;
+  }
+}
+
+async function saveOilMapFull(id){
+  const o=oils.find(x=>x.id===id);
+  if(!o)return;
+  o.mapImg=document.getElementById(`ao-mi-${id}`)?.value||'';
+  // shape already updated by selectShape click
+  if(activeOil===id)pickOil(id);
+  buildOriginsGrid();
+  if(window.saveOilToFirebase){
+    try{
+      await window.saveOilToFirebase(o);
+      toast('&#9989; Map saved for '+o.name+' — updating for all users!');
+    }catch(e){toast('&#9989; Map updated locally');}
+  }
 }
 function selectShape(oilId,shapeKey,el){
   document.querySelectorAll(`#shape-grid-${oilId} .map-shape-opt`).forEach(e=>e.classList.remove('sel'));
