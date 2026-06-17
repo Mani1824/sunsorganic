@@ -416,6 +416,104 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
 @media(max-width:1000px){.exp-layout{grid-template-columns:240px 1fr;}.exp-map{display:none;}.pw-compare{grid-template-columns:1fr;}.pw-vs{writing-mode:horizontal-tb;padding:14px;}.pw-vs-text{writing-mode:horizontal-tb;transform:none;}}
 @media(max-width:900px){.hero-content{grid-template-columns:1fr;padding:100px 6vw 60px;}.hero-visual{display:none;}.exp-layout{grid-template-columns:1fr;}.ad-layout{grid-template-columns:1fr;}.ad-side{display:flex;flex-wrap:wrap;padding:8px;}.ad-nav{padding:7px 10px;border-left:none!important;}.ad-stats{grid-template-columns:1fr 1fr;}.pw-pillars{grid-template-columns:1fr 1fr;}.story-grid{grid-template-columns:1fr;}.ft-grid{grid-template-columns:1fr;}}
 @media(max-width:700px){.nav-links{display:none;}.ad-grid{grid-template-columns:1fr;}.pw-pillars{grid-template-columns:1fr;}}
+
+/* ─── IMAGE MAP PANEL ─── */
+.exp-map{background:var(--lbg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.exp-map-leaf{position:absolute;border-radius:50%;border:1.5px solid rgba(26,92,42,.07);}
+.exp-map-leaf:nth-child(1){width:360px;height:360px;top:-100px;right:-80px;}
+.exp-map-leaf:nth-child(2){width:260px;height:260px;bottom:-60px;left:-40px;}
+.exp-map-leaf:nth-child(3){width:180px;height:180px;top:50%;left:50%;transform:translate(-50%,-50%);}
+.map-inner{position:relative;z-index:1;text-align:center;padding:24px;width:100%;}
+.map-img-wrap{width:100%;height:260px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-radius:16px;}
+.map-img-wrap img{width:100%;height:100%;object-fit:cover;border-radius:16px;filter:drop-shadow(0 10px 30px rgba(26,92,42,.25));transition:transform .4s ease;}
+.map-img-wrap img:hover{transform:scale(1.04);}
+.map-img-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;}
+.map-img-placeholder .map-svg-wrap svg{width:min(240px,85%);height:auto;filter:drop-shadow(0 10px 30px rgba(26,92,42,.25));}
+.map-region-label{margin-top:14px;font-weight:800;font-size:.78rem;color:var(--sage2);letter-spacing:.16em;text-transform:uppercase;}
+
+/* ─── SEASONAL OFFERS / COMBO SECTION ─── */
+#offers{background:linear-gradient(160deg,#0a1e0c 0%,#142a10 50%,#0a1e0c 100%);
+  padding:100px 5vw;position:relative;overflow:hidden;}
+#offers::before{content:'';position:absolute;top:-80px;right:-80px;width:350px;height:350px;
+  border-radius:50%;background:radial-gradient(circle,rgba(212,160,32,.1),transparent 70%);pointer-events:none;}
+#offers::after{content:'';position:absolute;bottom:-60px;left:-60px;width:280px;height:280px;
+  border-radius:50%;background:radial-gradient(circle,rgba(26,92,42,.15),transparent 70%);pointer-events:none;}
+.offers-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:52px;flex-wrap:wrap;gap:16px;}
+.offers-header .sec-eyebrow-text{color:var(--goldb);}
+.offers-header .sec-eyebrow-line{background:var(--goldb);}
+.offers-header .sec-title{color:#fff;}
+.offers-header .sec-sub{color:rgba(255,255,255,.45);}
+.offers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;}
+
+/* Offer card */
+.offer-card{border-radius:22px;overflow:hidden;position:relative;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  transition:all .4s cubic-bezier(.34,1.2,.64,1);}
+.offer-card:hover{transform:translateY(-8px);box-shadow:0 24px 60px rgba(0,0,0,.4);
+  border-color:rgba(212,160,32,.3);}
+.offer-card.inactive{opacity:.5;pointer-events:none;}
+/* Ribbon */
+.offer-ribbon{position:absolute;top:16px;right:-28px;background:linear-gradient(135deg,var(--gold),var(--amber));
+  color:#fff;font-size:.62rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  padding:5px 36px;transform:rotate(45deg);z-index:3;box-shadow:0 3px 10px rgba(0,0,0,.3);}
+/* Card image */
+.offer-img{height:200px;position:relative;overflow:hidden;}
+.offer-img img{width:100%;height:100%;object-fit:cover;transition:transform .5s ease;}
+.offer-card:hover .offer-img img{transform:scale(1.08);}
+.offer-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  font-size:4rem;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));}
+.offer-tag{position:absolute;bottom:12px;left:12px;
+  background:rgba(26,92,42,.85);backdrop-filter:blur(8px);
+  color:rgba(255,255,255,.9);font-size:.6rem;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;padding:4px 12px;border-radius:20px;
+  border:1px solid rgba(255,255,255,.15);}
+/* Card body */
+.offer-body{padding:20px 22px 22px;}
+.offer-name{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:5px;}
+.offer-desc{font-size:.8rem;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:14px;}
+/* Items list */
+.offer-items{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;}
+.offer-item-tag{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+  border-radius:20px;padding:4px 11px;font-size:.68rem;color:rgba(255,255,255,.75);font-weight:600;}
+/* Pricing row */
+.offer-price-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.offer-price{font-family:'Fraunces',serif;font-size:1.5rem;color:var(--goldb);font-weight:700;}
+.offer-original{font-size:.85rem;color:rgba(255,255,255,.3);text-decoration:line-through;}
+.offer-save{background:rgba(212,160,32,.2);border:1px solid rgba(212,160,32,.35);
+  color:var(--goldb);font-size:.65rem;font-weight:800;padding:3px 10px;border-radius:20px;
+  letter-spacing:.06em;text-transform:uppercase;}
+.offer-buy-btn{width:100%;padding:11px;
+  background:linear-gradient(135deg,var(--gold),var(--amber));
+  color:#fff;border:none;border-radius:14px;font-size:.84rem;cursor:pointer;
+  font-family:'Inter',sans-serif;font-weight:700;letter-spacing:.04em;
+  box-shadow:0 6px 20px rgba(212,160,32,.3);transition:all .3s;}
+.offer-buy-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(212,160,32,.45);}
+/* Timer badge */
+.offer-timer{display:flex;align-items:center;gap:6px;
+  font-size:.7rem;color:rgba(255,255,255,.5);font-weight:600;margin-bottom:10px;}
+.offer-timer-dot{width:6px;height:6px;border-radius:50%;background:var(--goldb);
+  animation:pulse-dot 1.5s ease-in-out infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.7);}}
+/* Empty state */
+.offers-empty{text-align:center;padding:60px;color:rgba(255,255,255,.2);}
+.offers-empty span{font-size:3rem;display:block;margin-bottom:12px;}
+
+/* ─── ADMIN: OFFERS TAB ─── */
+.offer-admin-card{background:#0f1e0c;border-radius:14px;padding:20px;border:1px solid #1a2e16;position:relative;}
+.offer-admin-card .oa-num{position:absolute;top:14px;right:14px;background:rgba(212,160,32,.15);
+  border:1px solid rgba(212,160,32,.25);border-radius:20px;padding:2px 10px;
+  font-size:.66rem;color:var(--gold);font-weight:700;}
+.offer-status-toggle{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 12px;
+  background:rgba(255,255,255,.04);border-radius:8px;border:1px solid #1a2e16;}
+.offer-status-toggle label{font-size:.76rem;color:#8a9a86;flex:1;}
+.toggle-sw{position:relative;width:38px;height:20px;cursor:pointer;}
+.toggle-sw input{opacity:0;width:0;height:0;}
+.toggle-track{position:absolute;inset:0;background:#1a2e16;border-radius:20px;transition:.3s;}
+.toggle-sw input:checked+.toggle-track{background:var(--sage);}
+.toggle-track::after{content:'';position:absolute;left:3px;top:3px;width:14px;height:14px;
+  border-radius:50%;background:#fff;transition:.3s;}
+.toggle-sw input:checked+.toggle-track::after{transform:translateX(18px);}
+
 </style>
 </head>
 <body>
@@ -504,6 +602,8 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
       <div class="ad-side-section">Website</div>
       <div class="ad-nav" onclick="switchTab('origins')" id="nav-origins"><span>&#127757;</span> Origin Maps</div>
       <div class="ad-nav" onclick="switchTab('why')" id="nav-why"><span>&#128200;</span> Price Story</div>
+      <div class="ad-nav" onclick="switchTab('offers')" id="nav-offers"><span>&#127809;</span> Offers &amp; Combos</div>
+      <div class="ad-nav" onclick="switchTab('offers')" id="nav-offers"><span>&#127809;</span> Offers &amp; Combos</div>
     </div>
     <div class="ad-main">
       <div class="ad-tab on" id="tab-overview">
@@ -579,6 +679,27 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
           <div id="pw-compare-inputs"></div>
           <button class="ad-save secondary" onclick="buildPriceComparisons()" style="margin-top:0">&#8635; Reload Inputs</button>
         </div>
+      <!-- OFFERS TAB -->
+      <div class="ad-tab" id="tab-offers">
+        <div class="ad-title"><span class="ad-title-icon">&#127809;</span> Seasonal Offers &amp; Combos</div>
+        <div class="ad-info-box" style="margin-bottom:20px">
+          <strong>How it works:</strong> Add up to 6 offer/combo cards shown on the website with image, price and discount.<br>
+          <span class="tip">Toggle Active/Inactive to show or hide any offer instantly. Changes save to Firestore.</span>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+          <button class="ad-save" style="width:auto;padding:10px 20px" onclick="addNewOffer()">&#43; Add New Offer</button>
+          <button class="ad-save secondary" style="width:auto;padding:10px 20px" onclick="buildOffersAdmin()">&#8635; Refresh</button>
+        </div>
+        <div class="ad-box" style="margin-bottom:16px">
+          <div class="ad-box-title">Section Header Text</div>
+          <div class="af-row">
+            <div class="af"><label>Section Title</label><input id="off-sec-title" value="Seasonal Offers &amp; Combos"></div>
+            <div class="af"><label>Subtitle</label><input id="off-sec-sub" value="Handpicked bundles at special prices."></div>
+          </div>
+          <button class="ad-save" onclick="saveOffersHeader()">&#128190; Save Header</button>
+        </div>
+        <div id="offers-admin-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px"></div>
+      </div>
       </div>
     </div>
   </div>
@@ -757,6 +878,23 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
   </div>
 </section>
 
+
+<!-- SEASONAL OFFERS & COMBO SECTION -->
+<section id="offers">
+  <div style="position:relative;z-index:1">
+    <div class="offers-header fade-up">
+      <div>
+        <div class="sec-eyebrow"><div class="sec-eyebrow-line" style="background:var(--goldb)"></div><div class="sec-eyebrow-text">Limited Time</div></div>
+        <h2 class="sec-title" id="offers-title" style="color:#fff">Seasonal Offers &amp; Combos</h2>
+        <p class="sec-sub" id="offers-subtitle" style="color:rgba(255,255,255,.45)">Handpicked bundles at special prices &#8212; for a limited time only.</p>
+      </div>
+    </div>
+    <div class="offers-grid" id="offers-grid">
+      <div class="offers-empty"><span>&#127807;</span>Loading offers&#8230;</div>
+    </div>
+  </div>
+</section>
+
 <!-- WHY COLD PRESSED -->
 <section id="why">
   <div class="fade-up">
@@ -926,11 +1064,21 @@ function pickOil(id){
     <button class="exp-btn map" onclick="openMM(${o.id})">&#128205; View Origin</button>
     ${o.video?`<button class="exp-btn vid" onclick="openVM(${o.id})">&#9654; Video Proof</button>`:''}
     <button class="exp-btn buy" onclick="addCartByOilId(${o.id})">&#128722; Buy Now</button>`;
-  // Render state map silhouette
-  const svg=shapes[o.shape]||shapes['india_s'];
-  document.getElementById('map-display').innerHTML=`
-    <div class="map-svg-wrap">${svg}</div>
-    <div class="map-region-label">${o.region}</div>`;
+  // Render map: use uploaded image if available, else SVG silhouette
+  const mapImgUrl = o.mapImg || '';
+  if(mapImgUrl){
+    document.getElementById('map-display').innerHTML=`
+      <div class="map-img-wrap">
+        <img src="${mapImgUrl}" alt="${o.region} map"
+          onerror="this.parentElement.innerHTML='<div class=map-img-placeholder>${shapes[o.shape]||shapes.india_s}<\/div>'">
+      </div>
+      <div class="map-region-label">${o.region}</div>`;
+  } else {
+    const svg=shapes[o.shape]||shapes['india_s'];
+    document.getElementById('map-display').innerHTML=`
+      <div class="map-img-placeholder"><div class="map-svg-wrap">${svg}</div></div>
+      <div class="map-region-label">${o.region}</div>`;
+  }
 }
 
 function addCartByOilId(oilId){
@@ -1011,7 +1159,7 @@ function openLogin(){
 function closeLogin(){document.getElementById('admin-login').classList.remove('open');}
 function openAdmin(){
   document.getElementById('admin-dash').classList.add('open');
-  refreshAdminStats();buildProdCards();buildOilCards();buildOriginsGrid();buildPriceComparisons();
+  refreshAdminStats();buildProdCards();buildOilCards();buildOriginsGrid();buildPriceComparisons();buildOffersAdmin();
   document.getElementById('ab-name').value=document.getElementById('logo-name').childNodes[0].textContent.trim();
 }
 function closeAdmin(){document.getElementById('admin-dash').classList.remove('open');}
@@ -1186,7 +1334,14 @@ function buildOilCards(){
       <div class="af"><label>Region / State</label><input id="ao-r-${o.id}" value="${o.region}"></div>
       <div class="af"><label>Description</label><textarea id="ao-d-${o.id}">${o.desc}</textarea></div>
       <div class="af"><label>GPS Coordinates</label><input id="ao-c-${o.id}" value="${o.coords||''}" placeholder="15.91&#176; N, 79.74&#176; E"></div>
-      <div class="af"><label>Google Maps Link</label><input id="ao-m-${o.id}" value="${o.map||''}" placeholder="https://maps.google.com/?q=..."></div>
+      <div class="af"><label>Map Image URL (shown in Origin Explorer)</label>
+        <div class="ad-img-preview" id="oilmap-prev-${o.id}">
+          ${o.mapImg?`<img src="${o.mapImg}" style="display:block" alt="">`:'<span style="font-size:1.4rem">&#128506;</span>'}
+          <span class="preview-hint">Map image preview</span>
+        </div>
+        <input id="ao-mi-${o.id}" value="${o.mapImg||''}" placeholder="https://mani1824.github.io/sunsorganic/maps/andhra.jpg" oninput="previewMapImg(${o.id},this.value)">
+      </div>
+      <div class="af"><label>Google Maps Link (popup)</label><input id="ao-m-${o.id}" value="${o.map||''}" placeholder="https://maps.google.com/?q=..."></div>
       <div class="af"><label>Video Proof URL (YouTube)</label><input id="ao-v-${o.id}" value="${o.video||''}" placeholder="https://youtube.com/watch?v=..."></div>
       <div class="af"><label>Emoji (fallback)</label><input id="ao-em-${o.id}" value="${o.emoji}" maxlength="3"></div>
       <button class="ad-save" onclick="saveOil(${o.id})">&#128190; Save Oil</button>
@@ -1208,6 +1363,7 @@ async function saveOil(id){
   o.coords=document.getElementById(`ao-c-${id}`).value;
   o.img=document.getElementById(`ao-i-${id}`).value;
   o.emoji=document.getElementById(`ao-em-${id}`).value||o.emoji;
+  o.mapImg=document.getElementById(`ao-mi-${id}`)?.value||'';
   o.map=document.getElementById(`ao-m-${id}`).value;
   o.video=document.getElementById(`ao-v-${id}`).value;
   renderExpList();if(activeOil===id)pickOil(id);buildOilCards();
@@ -1293,6 +1449,237 @@ function savePriceStory(){
   toast('&#9989; Price story updated!');
 }
 
+
+// ════════════ OFFERS DATA ════════════
+let offers = [
+  {id:1, active:true, name:"Starter Triple Pack", ribbon:"Best Value",
+   desc:"Perfect intro to cold pressing — three of our most popular oils in one bundle.",
+   items:["Ground Nut Oil","Coconut Oil","Sunflower Oil"],
+   emoji:"&#127809;", img:"",
+   price:"&#8377;950", priceNum:950,
+   originalPrice:"&#8377;1060", originalPriceNum:1060,
+   tag:"Seasonal Combo", timer:"Limited Stock"},
+  {id:2, active:true, name:"South India Essentials", ribbon:"Top Seller",
+   desc:"The three oils that power South Indian kitchens — pure, cold pressed, authentic.",
+   items:["Ground Nut Oil","Sesame Oil","Coconut Oil"],
+   emoji:"&#127807;", img:"",
+   price:"&#8377;1150", priceNum:1150,
+   originalPrice:"&#8377;1250", originalPriceNum:1250,
+   tag:"Regional Combo", timer:""},
+  {id:3, active:true, name:"Heart Health Duo", ribbon:"New",
+   desc:"Two of the most heart-healthy cold pressed oils — Sunflower and Safflower.",
+   items:["Sunflower Oil","Safflower Oil"],
+   emoji:"&#129408;", img:"",
+   price:"&#8377;580", priceNum:580,
+   originalPrice:"&#8377;670", originalPriceNum:670,
+   tag:"Health Combo", timer:""},
+  {id:4, active:false, name:"Complete 6-Oil Set", ribbon:"Max Value",
+   desc:"All six pure cold pressed oils in one complete package. The full Sunsa experience.",
+   items:["Ground Nut","Coconut","Sunflower","Mustard","Sesame","Safflower"],
+   emoji:"&#11088;", img:"",
+   price:"&#8377;1900", priceNum:1900,
+   originalPrice:"&#8377;2200", originalPriceNum:2200,
+   tag:"Full Collection", timer:"Seasonal Only"},
+];
+
+// Save offers to localStorage + Firestore
+function saveOffersLocally(){
+  try{localStorage.setItem('sunsa_offers',JSON.stringify(offers));}catch(e){}
+}
+function loadOffersLocally(){
+  try{
+    const s=localStorage.getItem('sunsa_offers');
+    if(s){offers=JSON.parse(s);}
+  }catch(e){}
+}
+
+// Render offers section on the public site
+function renderOffers(){
+  const grid=document.getElementById('offers-grid');
+  if(!grid)return;
+  const active=offers.filter(o=>o.active);
+  if(!active.length){
+    grid.innerHTML='<div class="offers-empty"><span>&#127807;</span>No active offers right now. Check back soon!</div>';
+    return;
+  }
+  grid.innerHTML=active.map(o=>{
+    const saved=o.originalPriceNum&&o.priceNum?Math.round((1-o.priceNum/o.originalPriceNum)*100):0;
+    return `<div class="offer-card fade-up">
+      ${o.ribbon?`<div class="offer-ribbon">${o.ribbon}</div>`:''}
+      <div class="offer-img">
+        ${o.img?`<img src="${o.img}" alt="${o.name}" onerror="this.parentElement.innerHTML='<div class=offer-img-placeholder>${o.emoji}</div>'">`
+          :`<div class="offer-img-placeholder">${o.emoji}</div>`}
+        ${o.tag?`<div class="offer-tag">${o.tag}</div>`:''}
+      </div>
+      <div class="offer-body">
+        ${o.timer?`<div class="offer-timer"><span class="offer-timer-dot"></span>${o.timer}</div>`:''}
+        <div class="offer-name">${o.name}</div>
+        <div class="offer-desc">${o.desc}</div>
+        <div class="offer-items">${o.items.map(i=>`<span class="offer-item-tag">${i}</span>`).join('')}</div>
+        <div class="offer-price-row">
+          <div class="offer-price">${o.price}</div>
+          ${o.originalPrice?`<div class="offer-original">${o.originalPrice}</div>`:''}
+          ${saved>0?`<div class="offer-save">Save ${saved}%</div>`:''}
+        </div>
+        <button class="offer-buy-btn" onclick="addOfferToCart(${o.id})">&#128722; Add Combo to Cart</button>
+      </div>
+    </div>`;
+  }).join('');
+  // Re-observe new fade-up elements
+  document.querySelectorAll('.fade-up:not(.visible)').forEach(el=>observer&&observer.observe(el));
+}
+
+function addOfferToCart(offerId){
+  const o=offers.find(x=>x.id===offerId);
+  if(!o)return;
+  // Add as a single cart item representing the combo
+  const comboItem={
+    id:'offer_'+o.id, name:o.name+' (Combo)',
+    priceNum:o.priceNum, price:o.price,
+    emoji:o.emoji, img:o.img, qty:1, isCombo:true
+  };
+  const ex=cartItems.find(x=>x.id===comboItem.id);
+  if(ex)ex.qty++;
+  else cartItems.push(comboItem);
+  updateCart();
+  toast('&#127809; '+o.name+' added to cart!');
+}
+
+// ════════════ ADMIN: OFFERS ════════════
+function buildOffersAdmin(){
+  const grid=document.getElementById('offers-admin-grid');
+  if(!grid)return;
+  grid.innerHTML=offers.map((o,idx)=>{
+    const saved=o.originalPriceNum&&o.priceNum?Math.round((1-o.priceNum/o.originalPriceNum)*100):0;
+    return `<div class="offer-admin-card">
+      <div class="oa-num">Offer #${idx+1}</div>
+      <div class="offer-status-toggle">
+        <label>Active on website</label>
+        <label class="toggle-sw">
+          <input type="checkbox" ${o.active?'checked':''} onchange="toggleOfferActive(${o.id},this.checked)">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="af">
+        <label>Offer Image URL</label>
+        <div class="ad-img-preview" id="offer-img-prev-${o.id}">
+          ${o.img?`<img src="${o.img}" style="display:block" alt="">`:`<span style="font-size:2rem">${o.emoji}</span>`}
+          <span class="preview-hint">Offer image</span>
+        </div>
+        <input id="oa-img-${o.id}" value="${o.img||''}" placeholder="https://...jpg" oninput="previewOfferImg(${o.id},this.value)">
+      </div>
+      <div class="af-row">
+        <div class="af"><label>Offer Name</label><input id="oa-name-${o.id}" value="${o.name}"></div>
+        <div class="af"><label>Ribbon Label</label><input id="oa-ribbon-${o.id}" value="${o.ribbon||''}" placeholder="e.g. Best Value"></div>
+      </div>
+      <div class="af"><label>Description</label><textarea id="oa-desc-${o.id}">${o.desc}</textarea></div>
+      <div class="af"><label>Items Included (comma separated)</label>
+        <input id="oa-items-${o.id}" value="${o.items.join(', ')}" placeholder="Ground Nut Oil, Coconut Oil"></div>
+      <div class="af-row">
+        <div class="af"><label>Price (&#8377;)</label><input type="number" id="oa-price-${o.id}" value="${o.priceNum}"></div>
+        <div class="af"><label>Original Price (&#8377;)</label><input type="number" id="oa-orig-${o.id}" value="${o.originalPriceNum||''}"></div>
+      </div>
+      <div class="af-row">
+        <div class="af"><label>Tag Badge</label><input id="oa-tag-${o.id}" value="${o.tag||''}" placeholder="Seasonal Combo"></div>
+        <div class="af"><label>Timer Text</label><input id="oa-timer-${o.id}" value="${o.timer||''}" placeholder="Limited Stock"></div>
+      </div>
+      <div class="af"><label>Emoji (fallback)</label><input id="oa-emoji-${o.id}" value="${o.emoji}" maxlength="3"></div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="ad-save" onclick="saveOffer(${o.id})" style="flex:2">&#128190; Save Offer</button>
+        <button class="ad-save secondary" onclick="deleteOffer(${o.id})" style="flex:1;background:rgba(184,68,68,.12);border-color:#b84444;color:#e07070">&#128465; Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addNewOffer(){
+  const newId=Math.max(...offers.map(o=>o.id),0)+1;
+  offers.push({id:newId,active:false,name:'New Offer',ribbon:'New',
+    desc:'Describe this offer here.',items:['Oil 1','Oil 2'],
+    emoji:'&#127809;',img:'',price:'&#8377;0',priceNum:0,
+    originalPrice:'',originalPriceNum:0,tag:'Combo',timer:''});
+  buildOffersAdmin();renderOffers();saveOffersLocally();
+  toast('&#43; New offer added — scroll down to edit it');
+}
+
+function toggleOfferActive(id,val){
+  const o=offers.find(x=>x.id===id);
+  if(o){o.active=val;renderOffers();saveOffersLocally();
+    saveOfferToFirebase(o);
+    toast(val?'&#9989; Offer now active on site':'&#10060; Offer hidden from site');}
+}
+
+function previewOfferImg(id,url){
+  const w=document.getElementById('offer-img-prev-'+id);
+  if(!w)return;
+  if(url){w.innerHTML=`<img src="${url}" style="display:block" onerror="this.style.display='none'" alt=""><span class="preview-hint">Offer image</span>`;}
+  else{const o=offers.find(x=>x.id===id);w.innerHTML=`<span style="font-size:2rem">${o?o.emoji:''}</span><span class="preview-hint">Offer image</span>`;}
+}
+
+function previewMapImg(id,url){
+  const w=document.getElementById('oilmap-prev-'+id);
+  if(!w)return;
+  if(url){w.innerHTML=`<img src="${url}" style="display:block" onerror="this.style.display='none'" alt=""><span class="preview-hint">Map image preview</span>`;}
+  else{w.innerHTML=`<span style="font-size:1.4rem">&#128506;</span><span class="preview-hint">Map image preview</span>`;}
+}
+
+async function saveOffer(id){
+  const o=offers.find(x=>x.id===id);
+  if(!o)return;
+  o.name=document.getElementById(`oa-name-${id}`).value;
+  o.ribbon=document.getElementById(`oa-ribbon-${id}`).value;
+  o.desc=document.getElementById(`oa-desc-${id}`).value;
+  o.items=document.getElementById(`oa-items-${id}`).value.split(',').map(s=>s.trim()).filter(Boolean);
+  o.priceNum=parseFloat(document.getElementById(`oa-price-${id}`).value)||0;
+  o.price='&#8377;'+o.priceNum.toLocaleString('en-IN');
+  o.originalPriceNum=parseFloat(document.getElementById(`oa-orig-${id}`).value)||0;
+  o.originalPrice=o.originalPriceNum?'&#8377;'+o.originalPriceNum.toLocaleString('en-IN'):'';
+  o.tag=document.getElementById(`oa-tag-${id}`).value;
+  o.timer=document.getElementById(`oa-timer-${id}`).value;
+  o.emoji=document.getElementById(`oa-emoji-${id}`).value||o.emoji;
+  o.img=document.getElementById(`oa-img-${id}`).value;
+  renderOffers();buildOffersAdmin();saveOffersLocally();
+  await saveOfferToFirebase(o);
+  toast('&#9989; Offer saved!');
+}
+
+function deleteOffer(id){
+  if(!confirm('Delete this offer?'))return;
+  offers=offers.filter(x=>x.id!==id);
+  renderOffers();buildOffersAdmin();saveOffersLocally();
+  toast('&#128465; Offer deleted');
+}
+
+async function saveOfferToFirebase(o){
+  try{await firebase.firestore().collection('offers').doc(String(o.id)).set(o);}
+  catch(e){}
+}
+
+function saveOffersHeader(){
+  const t=document.getElementById('off-sec-title').value;
+  const s=document.getElementById('off-sec-sub').value;
+  const el=document.getElementById('offers-title');
+  const el2=document.getElementById('offers-subtitle');
+  if(el)el.textContent=t;
+  if(el2)el2.textContent=s;
+  try{localStorage.setItem('sunsa_offers_header',JSON.stringify({title:t,sub:s}));}catch(e){}
+  toast('&#9989; Offers header saved!');
+}
+
+function loadOffersFromFirebase(){
+  try{
+    firebase.firestore().collection('offers').get().then(snap=>{
+      if(!snap.empty){
+        offers=snap.docs.map(d=>({...d.data(),id:d.data().id||Number(d.id)}));
+        renderOffers();
+        buildOffersAdmin();
+        saveOffersLocally();
+      }
+    });
+  }catch(e){}
+}
+
+
 // ════════════ INIT ════════════
 renderProducts();
 renderExpList();
@@ -1301,6 +1688,9 @@ pickOil(oils[0].id);
 (()=>{const el=document.getElementById('ft-year');if(el)el.innerHTML='&#169; '+new Date().getFullYear()+' Sunsa Organics. All rights reserved.';})();
 if(window.seedFirebaseIfEmpty)window.seedFirebaseIfEmpty(products,oils);
 loadBranding();
+loadOffersLocally();
+loadOffersFromFirebase();
+renderOffers();
 </script>
 
 <script>
