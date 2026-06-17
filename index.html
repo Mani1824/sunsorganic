@@ -1213,11 +1213,21 @@ function applyBranding(b){
   if(b.heroTitle)document.getElementById('hero-title').innerHTML=b.heroTitle;
   if(b.heroSub)document.getElementById('hero-sub').textContent=b.heroSub;
 }
-async function loadBranding(){
+function loadBranding(){
+  // Load from localStorage instantly (no delay, always works)
   try{
-    const doc=await firebase.firestore().collection('settings').doc('branding').get();
-    if(doc.exists)applyBranding(doc.data());
-  }catch(e){console.log('Branding offline');}
+    const saved=localStorage.getItem('sunsa_branding');
+    if(saved)applyBranding(JSON.parse(saved));
+  }catch(e){}
+  // Also try Firestore for cross-device sync
+  try{
+    firebase.firestore().collection('settings').doc('branding').get().then(doc=>{
+      if(doc.exists){
+        applyBranding(doc.data());
+        localStorage.setItem('sunsa_branding',JSON.stringify(doc.data()));
+      }
+    });
+  }catch(e){}
 }
 async function saveBranding(){
   const nm=document.getElementById('ab-name').value;
@@ -1229,6 +1239,9 @@ async function saveBranding(){
   applyBranding(branding);
   if(lg){document.getElementById('logo-preview-img').src=lg;document.getElementById('logo-preview-img').style.display='block';document.getElementById('logo-preview-emoji').style.display='none';}
   else{document.getElementById('logo-preview-img').style.display='none';document.getElementById('logo-preview-emoji').style.display='';}
+  // Save to localStorage first — always works, survives refresh
+  try{localStorage.setItem('sunsa_branding',JSON.stringify(branding));}catch(e){}
+  // Also try Firestore for cross-device sync
   try{
     await firebase.firestore().collection('settings').doc('branding').set(branding);
     toast('&#9989; Branding saved — will stay after refresh!');
