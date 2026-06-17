@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sunsa Organics — Pure Cold Pressed Oils</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey:"AIzaSyChAgCxB2qiuiev4uhFkwUCs3OSc5mpCG0",
+    authDomain:"suns-c59fe.firebaseapp.com",
+    projectId:"suns-c59fe",
+    storageBucket:"suns-c59fe.firebasestorage.app",
+    messagingSenderId:"580371933516",
+    appId:"1:580371933516:web:9b429c8dcd503d13f087e9",
+    measurementId:"G-2BHRFEHF1R"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db   = firebase.firestore();
+  const auth = firebase.auth();
+
+  // Real-time listeners — update products & oils when Firestore changes
+  db.collection('products').onSnapshot(snap=>{
+    if(!snap.empty){
+      window.products=snap.docs.map(d=>({...d.data(),id:d.data().id||Number(d.id)}));
+      if(typeof renderProducts==='function')renderProducts();
+      if(typeof refreshAdminStats==='function')refreshAdminStats();
+    }
+  });
+  db.collection('oils').onSnapshot(snap=>{
+    if(!snap.empty){
+      window.oils=snap.docs.map(d=>({...d.data(),id:d.data().id||Number(d.id)}));
+      if(typeof renderExpList==='function')renderExpList();
+      if(typeof buildOilCards==='function'&&document.getElementById('admin-dash')?.classList.contains('open'))buildOilCards();
+    }
+  });
+
+  auth.onAuthStateChanged(user=>{window._adminUser=user||null;});
+
+  // ── Auth functions — fully global, callable from onclick ──
+  window.doFirebaseLogin = async function(){
+    const email  = document.getElementById('al-email').value.trim();
+    const pass   = document.getElementById('al-input').value;
+    const errEl  = document.getElementById('al-err');
+    errEl.style.display='none';
+    try{
+      await auth.signInWithEmailAndPassword(email,pass);
+      closeLogin(); openAdmin();
+    }catch(e){
+      errEl.textContent='Incorrect email or password.';
+      errEl.style.display='block';
+      document.getElementById('al-input').value='';
+    }
+  };
+
+  window.doFirebaseLogout = async function(){
+    await auth.signOut();
+    closeAdmin();
+    toast('&#128075; Logged out');
+  };
+
+  window.saveProductToFirebase = async function(p){
+    await db.collection('products').doc(String(p.id)).set(p);
+  };
+
+  window.saveOilToFirebase = async function(o){
+    await db.collection('oils').doc(String(o.id)).set(o);
+  };
+
+  window.seedFirebaseIfEmpty = async function(prods,oilsArr){
+    const pSnap = await db.collection('products').get();
+    if(pSnap.empty){for(const p of prods) await db.collection('products').doc(String(p.id)).set(p);}
+    const oSnap = await db.collection('oils').get();
+    if(oSnap.empty){for(const o of oilsArr) await db.collection('oils').doc(String(o.id)).set(o);}
+  };
+</script>
+
+<style>
+:root{
+  --sage:#1F5C2E; --sage2:#2D7A3F; --cream:#F5EDD6; --gold:#D4A020;
+  --amber:#C8882A; --earth:#1A1208; --mist:#E8F0DC; --white:#FDFAF2;
+  --red:#B84444; --hl:#F0E4A0; --dark:#0D1109; --lbg:#EDE8D4;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--earth);}
+a{text-decoration:none;}
+
+/* TOAST */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(90px);
+  background:var(--sage);color:#fff;padding:10px 26px;border-radius:30px;font-size:.84rem;
+  z-index:999999;transition:transform .35s ease;pointer-events:none;white-space:nowrap;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:200;background:rgba(245,237,214,.97);
+  backdrop-filter:blur(12px);border-bottom:1px solid rgba(31,92,46,.1);
+  padding:0 5vw;display:flex;align-items:center;justify-content:space-between;height:68px;}
+.logo-wrap{display:flex;align-items:center;gap:10px;cursor:pointer;}
+.logo-circle{width:42px;height:42px;border-radius:50%;background:var(--sage);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
+.logo-circle img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:none;}
+.logo-name{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--sage);line-height:1.1;}
+.logo-name small{display:block;font-family:'DM Sans',sans-serif;font-size:.56rem;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--amber);font-weight:500;}
+.nav-links{display:flex;gap:26px;}
+.nav-links a{color:var(--earth);font-size:.86rem;font-weight:500;opacity:.6;transition:opacity .2s;}
+.nav-links a:hover{opacity:1;}
+.nav-right{display:flex;gap:10px;}
+.cart-btn{padding:9px 20px;border-radius:24px;border:none;background:var(--sage);
+  color:#fff;font-size:.82rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;}
+.cart-count{background:var(--gold);color:#fff;border-radius:50%;width:18px;height:18px;
+  font-size:.68rem;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;}
+
+/* HERO */
+.hero{min-height:88vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;overflow:hidden;}
+.hero-text{padding:80px 5vw 80px 8vw;}
+.hero-eyebrow{font-size:.66rem;font-weight:700;letter-spacing:.26em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.hero-eyebrow::before{content:'';display:inline-block;width:28px;height:2px;background:var(--gold);}
+.hero-title{font-family:'Playfair Display',serif;font-size:clamp(2.4rem,4vw,3.8rem);line-height:1.1;margin-bottom:18px;}
+.hero-title em{font-style:italic;color:var(--sage);}
+.hero-sub{font-size:.97rem;color:#5a4a2a;line-height:1.75;max-width:420px;margin-bottom:32px;}
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap;}
+.btn-p{padding:13px 30px;background:var(--sage);color:#fff;border:none;border-radius:30px;
+  font-size:.9rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .25s;}
+.btn-p:hover{background:#164820;transform:translateY(-2px);box-shadow:0 8px 24px rgba(31,92,46,.3);}
+.btn-o{padding:13px 30px;background:transparent;color:var(--earth);border:2px solid var(--sage);
+  border-radius:30px;font-size:.9rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .25s;}
+.btn-o:hover{background:var(--sage);color:#fff;}
+.hero-right{height:88vh;background:linear-gradient(145deg,#c2d99e 0%,#88b560 40%,#4e8830 100%);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;position:relative;overflow:hidden;}
+.hero-right::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 60% 28%,rgba(255,255,255,.18),transparent 55%);}
+.hero-bottles{display:flex;gap:14px;align-items:flex-end;position:relative;z-index:1;}
+.h-bottle{display:flex;flex-direction:column;align-items:center;gap:6px;animation:float 4s ease-in-out infinite;}
+.h-bottle:nth-child(2){animation-delay:.5s;}.h-bottle:nth-child(3){animation-delay:1s;}
+.h-bottle-icon{font-size:3rem;filter:drop-shadow(0 8px 18px rgba(0,0,0,.2));}
+.h-bottle-name{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(255,255,255,.9);background:rgba(31,92,46,.5);padding:3px 8px;border-radius:20px;}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-14px);}}
+.hero-badge{position:relative;z-index:1;background:rgba(255,255,255,.18);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.3);border-radius:40px;padding:9px 22px;}
+.hero-badge span{font-size:.72rem;font-weight:700;color:#fff;letter-spacing:.05em;text-transform:uppercase;}
+
+/* TRUST BAR */
+.trust{background:var(--sage);color:#fff;padding:14px 5vw;display:flex;justify-content:center;gap:40px;flex-wrap:wrap;}
+.trust-item{display:flex;align-items:center;gap:8px;font-size:.79rem;font-weight:500;letter-spacing:.04em;}
+
+/* SECTION */
+section{padding:80px 5vw;}
+.sec-label{font-size:.64rem;font-weight:700;letter-spacing:.26em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.sec-label::before{content:'';display:inline-block;width:22px;height:2px;background:var(--gold);}
+.sec-title{font-family:'Playfair Display',serif;font-size:clamp(1.7rem,3vw,2.5rem);line-height:1.2;margin-bottom:10px;}
+.sec-sub{color:#7a6040;font-size:.9rem;line-height:1.7;max-width:500px;}
+
+/* ── PRODUCTS ── */
+#products{background:var(--white);}
+.prod-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:44px;flex-wrap:wrap;gap:14px;}
+.prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(252px,1fr));gap:24px;}
+.prod-card{background:var(--lbg);border-radius:18px;overflow:hidden;
+  border:1.5px solid rgba(31,92,46,.1);transition:transform .3s,box-shadow .3s;cursor:pointer;position:relative;}
+.prod-card:hover{transform:translateY(-6px);box-shadow:0 20px 54px rgba(31,92,46,.14);}
+.prod-top-band{background:var(--sage);padding:14px 16px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.ptb-logo{display:flex;align-items:center;gap:8px;}
+.ptb-logo svg{width:30px;height:30px;}
+.ptb-brand{color:#fff;font-family:'Playfair Display',serif;font-size:.9rem;font-weight:700;letter-spacing:.03em;}
+.ptb-sub{color:rgba(255,255,255,.65);font-size:.46rem;letter-spacing:.22em;text-transform:uppercase;margin-top:1px;}
+.prod-img{height:175px;display:flex;align-items:center;justify-content:center;
+  font-size:4.5rem;background:var(--lbg);position:relative;overflow:hidden;}
+.prod-img img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;}
+.prod-img .emoji-fb{position:relative;z-index:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.1));}
+.prod-badge{position:absolute;top:9px;left:9px;background:var(--sage);color:#fff;
+  font-size:.6rem;padding:3px 10px;border-radius:20px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;z-index:2;}
+.prod-qty-tag{position:absolute;top:9px;right:9px;background:rgba(31,92,46,.12);color:var(--sage);
+  font-size:.6rem;padding:3px 9px;border-radius:20px;z-index:2;font-weight:600;}
+.prod-body{padding:14px 17px 0;}
+.prod-name{font-family:'Playfair Display',serif;font-size:1.05rem;margin-bottom:3px;color:var(--earth);font-weight:700;}
+.prod-size{font-size:.7rem;color:var(--sage);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
+.prod-desc{font-size:.76rem;color:#8a7050;line-height:1.5;margin-bottom:10px;}
+.prod-footer{display:flex;align-items:center;justify-content:space-between;
+  background:var(--sage);border-radius:0 0 16px 16px;padding:10px 16px;margin:0 -1px -1px;}
+.prod-price{font-family:'Playfair Display',serif;font-size:1.15rem;color:#fff;}
+.add-btn{padding:7px 15px;background:var(--gold);color:#fff;border:none;border-radius:18px;
+  font-size:.76rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;transition:background .2s;}
+.add-btn:hover{background:#b08018;}
+.oos .add-btn{background:rgba(255,255,255,.25);cursor:default;}
+.oos{opacity:.65;}
+
+/* ══════════════════════════════════════════════
+   WHY OUR PRICES ARE HIGHER — Price Justification
+══════════════════════════════════════════════ */
+#price-why{background:linear-gradient(135deg,var(--earth) 0%,#2a1e0a 100%);padding:80px 5vw;position:relative;overflow:hidden;}
+#price-why::before{content:'';position:absolute;top:-60px;right:-60px;width:300px;height:300px;
+  border-radius:50%;background:radial-gradient(circle,rgba(212,160,32,.12),transparent 70%);}
+#price-why::after{content:'';position:absolute;bottom:-40px;left:-40px;width:200px;height:200px;
+  border-radius:50%;background:radial-gradient(circle,rgba(31,92,46,.18),transparent 70%);}
+.pw-header{text-align:center;margin-bottom:60px;}
+.pw-eyebrow{font-size:.66rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:10px;}
+.pw-eyebrow::before,.pw-eyebrow::after{content:'';display:inline-block;width:40px;height:1.5px;background:var(--gold);opacity:.5;}
+.pw-title{font-family:'Playfair Display',serif;font-size:clamp(1.9rem,3.5vw,3rem);color:var(--cream);line-height:1.15;margin-bottom:14px;}
+.pw-title span{color:var(--gold);}
+.pw-sub{color:rgba(245,237,214,.5);font-size:.92rem;line-height:1.7;max-width:560px;margin:0 auto;}
+
+/* Big comparison banner */
+.pw-compare{display:grid;grid-template-columns:1fr auto 1fr;gap:0;margin-bottom:60px;border-radius:20px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,.4);}
+.pw-col{padding:32px 28px;}
+.pw-col.cheap{background:#1a1a1a;}
+.pw-col.pure{background:var(--sage);}
+.pw-col-label{font-size:.62rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-bottom:16px;opacity:.6;}
+.pw-col.pure .pw-col-label{color:var(--hl);}
+.pw-col.cheap .pw-col-label{color:#888;}
+.pw-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:.85rem;line-height:1.5;}
+.pw-item-icon{font-size:.9rem;margin-top:1px;flex-shrink:0;}
+.pw-col.cheap .pw-item{color:rgba(255,255,255,.45);}
+.pw-col.pure .pw-item{color:rgba(255,255,255,.9);}
+.pw-vs{background:var(--gold);display:flex;align-items:center;justify-content:center;
+  padding:0 18px;writing-mode:vertical-rl;text-orientation:mixed;}
+.pw-vs-text{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;color:#fff;
+  letter-spacing:.1em;transform:rotate(180deg);}
+
+/* Value pillars grid */
+.pw-pillars{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:56px;}
+.pw-pill{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;padding:22px 20px;transition:background .2s,transform .2s;cursor:default;}
+.pw-pill:hover{background:rgba(212,160,32,.1);border-color:rgba(212,160,32,.3);transform:translateY(-3px);}
+.pw-pill-icon{font-size:1.8rem;margin-bottom:10px;}
+.pw-pill-title{font-size:.88rem;font-weight:700;color:var(--cream);margin-bottom:5px;}
+.pw-pill-desc{font-size:.76rem;color:rgba(245,237,214,.45);line-height:1.6;}
+
+/* Price transparency strip */
+.pw-strip{background:rgba(212,160,32,.1);border:1px solid rgba(212,160,32,.25);
+  border-radius:16px;padding:28px 36px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;}
+.pw-strip-text{flex:1;min-width:260px;}
+.pw-strip-text h3{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--cream);margin-bottom:6px;}
+.pw-strip-text p{font-size:.83rem;color:rgba(245,237,214,.5);line-height:1.65;}
+.pw-strip-badges{display:flex;gap:10px;flex-wrap:wrap;}
+.pw-badge{background:rgba(31,92,46,.4);border:1px solid rgba(31,92,46,.6);border-radius:30px;
+  padding:8px 16px;font-size:.76rem;font-weight:700;color:rgba(255,255,255,.85);letter-spacing:.04em;}
+.pw-badge.gold{background:rgba(212,160,32,.2);border-color:rgba(212,160,32,.5);color:var(--gold);}
+
+/* ══════════════════════════════════════════════
+   ORIGIN EXPLORER — exact match to screenshot style
+══════════════════════════════════════════════ */
+#explorer{background:var(--cream);padding:80px 5vw;}
+.explorer-dashes{display:flex;gap:7px;margin-top:6px;margin-bottom:40px;}
+.explorer-dashes span{width:38px;height:4px;border-radius:4px;background:var(--gold);}
+.explorer-dashes span:nth-child(2){opacity:.5;width:28px;}
+.explorer-dashes span:nth-child(3){opacity:.25;width:18px;}
+
+/* 3-column layout: list | info card | map panel */
+.exp-layout{display:grid;grid-template-columns:300px 1fr 1.3fr;min-height:500px;border-radius:20px;overflow:hidden;
+  box-shadow:0 8px 40px rgba(31,92,46,.12);border:1px solid rgba(31,92,46,.08);}
+
+/* LEFT — scrollable oil list */
+.exp-list{background:var(--white);padding:16px 10px;overflow-y:auto;max-height:520px;}
+.exp-item{display:flex;align-items:center;gap:12px;padding:13px 14px;
+  border-radius:12px;cursor:pointer;transition:background .18s;margin-bottom:3px;}
+.exp-item:hover{background:rgba(31,92,46,.05);}
+.exp-item.active{background:var(--hl);}
+.exp-letter{width:40px;height:40px;border-radius:50%;background:var(--earth);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;
+  flex-shrink:0;overflow:hidden;}
+.exp-letter img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.exp-item-name{font-weight:600;font-size:.9rem;color:var(--earth);}
+.exp-item-region{font-size:.72rem;color:rgba(26,18,8,.4);margin-top:1px;}
+
+/* CENTRE — info card */
+.exp-info{background:#fff;padding:40px 36px;display:flex;flex-direction:column;justify-content:center;}
+.exp-info h2{font-family:'Playfair Display',serif;font-size:2.1rem;margin-bottom:5px;color:var(--earth);}
+.exp-from{font-style:italic;color:#aaa;font-size:.9rem;margin-bottom:18px;}
+.exp-desc{color:#5a4a2a;line-height:1.72;font-size:.9rem;margin-bottom:22px;}
+.exp-price-row{display:flex;align-items:baseline;gap:8px;margin-bottom:22px;}
+.exp-price{font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--sage);}
+.exp-price-size{font-size:.76rem;color:#aaa;font-weight:500;}
+.exp-btns{display:flex;gap:9px;flex-wrap:wrap;}
+.exp-btn{padding:9px 18px;border-radius:24px;font-size:.78rem;font-weight:600;
+  cursor:pointer;border:2px solid;background:transparent;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.exp-btn.map{border-color:var(--sage);color:var(--sage);}
+.exp-btn.map:hover{background:var(--sage);color:#fff;}
+.exp-btn.vid{border-color:var(--amber);color:var(--amber);}
+.exp-btn.vid:hover{background:var(--amber);color:#fff;}
+.exp-btn.buy{background:var(--sage);color:#fff;border-color:var(--sage);}
+.exp-btn.buy:hover{background:#164820;}
+
+/* RIGHT — map panel (cream bg with leaf pattern like screenshot) */
+.exp-map{background:var(--lbg);display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;}
+/* decorative swirl leaves in background */
+.exp-map::before{content:'';position:absolute;inset:0;
+  background-image:radial-gradient(ellipse at 20% 80%,rgba(31,92,46,.06) 0%,transparent 60%),
+    radial-gradient(ellipse at 80% 20%,rgba(212,160,32,.06) 0%,transparent 60%);
+  pointer-events:none;}
+/* large decorative leaf arcs */
+.exp-map-leaf{position:absolute;border-radius:50%;border:2px solid rgba(31,92,46,.06);}
+.exp-map-leaf:nth-child(1){width:340px;height:340px;top:-100px;right:-80px;}
+.exp-map-leaf:nth-child(2){width:240px;height:240px;bottom:-60px;left:-40px;}
+.map-inner{position:relative;z-index:1;text-align:center;padding:24px;}
+.map-svg-wrap{display:flex;align-items:center;justify-content:center;}
+.map-svg-wrap svg{width:min(260px,85%);height:auto;filter:drop-shadow(0 8px 28px rgba(31,92,46,.22));}
+.map-region-label{margin-top:14px;font-weight:800;font-size:.78rem;color:var(--sage2);
+  letter-spacing:.14em;text-transform:uppercase;}
+
+/* WHY COLD PRESSED */
+#why{background:var(--sage);color:#fff;}
+#why .sec-label{color:var(--gold);}
+#why .sec-label::before{background:var(--gold);}
+#why .sec-title{color:#fff;}
+.why-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-top:36px;}
+.why-card{background:rgba(255,255,255,.08);border-radius:14px;padding:24px;border:1px solid rgba(255,255,255,.12);transition:background .2s,transform .2s;}
+.why-card:hover{background:rgba(255,255,255,.14);transform:translateY(-3px);}
+.why-icon{font-size:2.2rem;margin-bottom:12px;}
+.why-title{font-weight:700;font-size:.95rem;margin-bottom:7px;}
+.why-desc{font-size:.8rem;color:rgba(255,255,255,.6);line-height:1.65;}
+
+/* STORY */
+#story{background:var(--earth);color:var(--cream);}
+#story .sec-label{color:var(--gold);}
+#story .sec-label::before{background:var(--gold);}
+#story .sec-sub{color:rgba(245,237,214,.5);}
+.story-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
+.story-stats{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:30px;}
+.stat-box{background:rgba(255,255,255,.06);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,.07);}
+.stat-n{font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold);line-height:1;}
+.stat-l{font-size:.68rem;color:rgba(245,237,214,.38);margin-top:4px;text-transform:uppercase;letter-spacing:.1em;}
+.story-visual{border-radius:18px;height:360px;background:linear-gradient(145deg,var(--sage) 0%,#164820 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;}
+.sv-grid{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.sv-oil{background:rgba(255,255,255,.12);border-radius:10px;padding:9px 14px;
+  font-size:.7rem;font-weight:700;color:rgba(255,255,255,.9);letter-spacing:.06em;
+  text-transform:uppercase;border:1px solid rgba(255,255,255,.14);}
+.sv-badge{background:var(--gold);color:#fff;border-radius:30px;padding:9px 24px;
+  font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+
+/* CART */
+#cart{position:fixed;top:0;right:-100%;width:min(390px,100vw);height:100vh;
+  background:var(--white);z-index:7777;box-shadow:-8px 0 40px rgba(0,0,0,.13);
+  transition:right .35s ease;display:flex;flex-direction:column;}
+#cart.open{right:0;}
+.cart-head{padding:20px 22px;display:flex;justify-content:space-between;align-items:center;background:var(--sage);}
+.cart-head h3{font-family:'Playfair Display',serif;font-size:1.2rem;color:#fff;}
+.cart-x{background:none;border:none;font-size:1.3rem;cursor:pointer;color:rgba(255,255,255,.65);}
+.cart-body{flex:1;overflow-y:auto;padding:16px 22px;}
+.ci{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid rgba(31,92,46,.07);}
+.ci-icon{width:50px;height:50px;background:var(--mist);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:1.7rem;flex-shrink:0;overflow:hidden;}
+.ci-icon img{width:100%;height:100%;object-fit:cover;}
+.ci-name{font-size:.87rem;font-weight:600;margin-bottom:2px;}
+.ci-price{font-size:.79rem;color:var(--sage);font-weight:700;}
+.ci-rm{background:none;border:none;color:#ccc;cursor:pointer;font-size:.95rem;}
+.ci-rm:hover{color:var(--red);}
+.cart-foot{padding:20px 22px;border-top:1.5px solid rgba(31,92,46,.08);}
+.cart-total{display:flex;justify-content:space-between;font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:13px;}
+.chk-btn{width:100%;padding:13px;background:var(--sage);color:#fff;border:none;
+  border-radius:30px;font-size:.92rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;transition:background .2s;}
+.chk-btn:hover{background:#164820;}
+.empty-cart{text-align:center;padding:56px 16px;color:#ccc;}
+.empty-cart span{font-size:2.8rem;display:block;margin-bottom:10px;}
+
+/* MODALS */
+#vmodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9000;align-items:center;justify-content:center;}
+#vmodal.open{display:flex;}
+.vm-inner{background:#151510;border-radius:18px;padding:28px;width:min(560px,92vw);}
+.vm-head{font-family:'Playfair Display',serif;color:var(--cream);font-size:1.1rem;
+  margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.vm-head button{background:none;border:none;color:#888;cursor:pointer;font-size:1.2rem;}
+.vm-box{width:100%;aspect-ratio:16/9;background:#0a0a08;border-radius:10px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;}
+.vm-box span{font-size:3.2rem;}
+.vm-box p{color:#777;font-size:.8rem;}
+.vm-link{color:var(--gold);font-size:.85rem;padding:8px 18px;border:1px solid var(--gold);border-radius:20px;transition:all .2s;}
+.vm-link:hover{background:var(--gold);color:#000;}
+#mmodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9000;align-items:center;justify-content:center;}
+#mmodal.open{display:flex;}
+.mm-inner{background:var(--white);border-radius:18px;padding:28px;width:min(520px,92vw);}
+.mm-head{font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.mm-head button{background:none;border:none;color:#aaa;cursor:pointer;font-size:1.2rem;}
+.mm-box{width:100%;aspect-ratio:16/9;border-radius:10px;background:var(--mist);
+  border:2px dashed rgba(31,92,46,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:.82rem;color:#888;}
+
+/* FOOTER */
+footer{background:var(--earth);color:rgba(245,237,214,.42);padding:48px 5vw 28px;}
+.ft-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:36px;margin-bottom:34px;}
+.ft-brand p{font-size:.8rem;line-height:1.68;max-width:280px;margin-top:10px;}
+.ft-col h5{color:var(--cream);font-size:.7rem;text-transform:uppercase;letter-spacing:.14em;margin-bottom:13px;}
+.ft-col a{display:block;color:rgba(245,237,214,.36);font-size:.8rem;margin-bottom:7px;transition:color .2s;}
+.ft-col a:hover{color:var(--cream);}
+.ft-bottom{border-top:1px solid rgba(255,255,255,.06);padding-top:22px;
+  display:flex;justify-content:space-between;font-size:.72rem;flex-wrap:wrap;gap:6px;}
+.ft-certs{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap;}
+.ft-cert{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);
+  border-radius:20px;padding:4px 12px;font-size:.64rem;color:rgba(245,237,214,.45);letter-spacing:.06em;text-transform:uppercase;}
+
+/* ══════════════════════════════════════════════
+   HIDDEN ADMIN — invisible trigger at bottom
+   Click tiny dot 5x rapidly to open login
+══════════════════════════════════════════════ */
+#admin-trigger{height:48px;background:var(--earth);display:flex;align-items:center;justify-content:center;cursor:default;user-select:none;}
+#admin-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.04);}
+
+#admin-login{display:none;position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:99998;align-items:center;justify-content:center;}
+#admin-login.open{display:flex;}
+.al-box{background:#141a10;border-radius:22px;padding:46px;width:min(420px,92vw);box-shadow:0 24px 80px rgba(0,0,0,.7);}
+.al-box h2{font-family:'Playfair Display',serif;color:var(--cream);font-size:1.5rem;margin-bottom:4px;}
+.al-box .al-sub{font-size:.78rem;color:#556;margin-bottom:28px;}
+.al-box input{width:100%;padding:12px 14px;border:1.5px solid #2a362a;border-radius:9px;
+  font-size:.95rem;font-family:'DM Mono',monospace;background:#0d120a;color:#ccc;margin-bottom:12px;outline:none;}
+.al-box input:focus{border-color:var(--sage);}
+.al-submit{width:100%;padding:13px;background:var(--sage);color:#fff;border:none;
+  border-radius:9px;font-size:.92rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;transition:background .2s;}
+.al-submit:hover{background:#164820;}
+.al-cancel{width:100%;padding:9px;background:transparent;color:#445;border:none;font-size:.8rem;cursor:pointer;margin-top:8px;}
+#al-err{color:#e07070;font-size:.8rem;display:none;margin-bottom:10px;padding:8px 12px;background:rgba(184,68,68,.1);border-radius:7px;}
+
+/* ADMIN DASHBOARD */
+#admin-dash{display:none;position:fixed;inset:0;background:var(--dark);z-index:99997;overflow-y:auto;font-family:'DM Sans',sans-serif;}
+#admin-dash.open{display:block;}
+.adh{background:#0c1609;padding:16px 26px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid #1a2e16;position:sticky;top:0;z-index:10;}
+.adh-left{display:flex;align-items:center;gap:14px;}
+.adh-title{font-family:'Playfair Display',serif;color:var(--cream);font-size:1.3rem;}
+.adh-badge{background:rgba(212,160,32,.15);border:1px solid rgba(212,160,32,.3);border-radius:20px;
+  padding:3px 10px;font-size:.64rem;color:var(--gold);font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.adh-right{display:flex;gap:10px;align-items:center;}
+.adh-tag{color:#3a4e36;font-size:.76rem;}
+.adh-x{padding:7px 18px;border:1.5px solid #2a3a26;border-radius:18px;background:transparent;
+  color:#6a7a66;font-size:.76rem;cursor:pointer;transition:all .2s;}
+.adh-x:hover{border-color:var(--red);color:var(--red);}
+
+.ad-layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 58px);}
+.ad-side{background:#0c1609;border-right:1px solid #1a2e16;padding:22px 0;}
+.ad-side-section{padding:8px 18px 4px;font-size:.62rem;color:#3a4e36;
+  text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin-top:12px;}
+.ad-nav{display:flex;align-items:center;gap:10px;padding:11px 20px;font-size:.83rem;color:#6a7a66;cursor:pointer;transition:all .18s;}
+.ad-nav:hover{color:var(--cream);background:rgba(255,255,255,.03);}
+.ad-nav.on{color:var(--cream);background:rgba(31,92,46,.18);border-left:3px solid var(--sage);}
+.ad-nav span{font-size:1.05rem;}
+.ad-main{padding:28px;}
+.ad-tab{display:none;}.ad-tab.on{display:block;}
+
+/* Admin cards */
+.ad-title{font-family:'Playfair Display',serif;color:var(--cream);font-size:1.15rem;
+  margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid #1a2e16;
+  display:flex;align-items:center;gap:10px;}
+.ad-title-icon{font-size:1.2rem;}
+.ad-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px;}
+.ad-stat{background:#111e0e;border-radius:12px;padding:18px;border:1px solid #1a2e16;text-align:center;}
+.ad-stat-n{font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--gold);}
+.ad-stat-l{font-size:.66rem;color:#3a4e36;text-transform:uppercase;letter-spacing:.08em;margin-top:3px;}
+.ad-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;}
+.ad-card{background:#111e0e;border-radius:14px;padding:20px;border:1px solid #1a2e16;}
+.ad-card-top{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #1a2e16;}
+.ad-icon{width:46px;height:46px;border-radius:10px;background:#0a110a;
+  display:flex;align-items:center;justify-content:center;font-size:1.5rem;overflow:hidden;flex-shrink:0;}
+.ad-icon img{width:100%;height:100%;object-fit:cover;border-radius:10px;}
+.ad-card-name{color:var(--cream);font-weight:700;font-size:.9rem;}
+.ad-card-sub{color:#3a4e36;font-size:.72rem;margin-top:3px;}
+.af{margin-bottom:12px;}
+.af label{display:block;font-size:.68rem;color:#4a5e46;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
+.af input,.af textarea,.af select{width:100%;padding:9px 12px;border:1.5px solid #1a2e16;border-radius:8px;
+  font-size:.83rem;font-family:'DM Sans',sans-serif;background:#0a110a;color:#bbb;outline:none;transition:border-color .18s;}
+.af input:focus,.af textarea:focus{border-color:var(--sage);}
+.af textarea{resize:vertical;min-height:56px;}
+.af-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.af-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.ad-save{width:100%;padding:11px;background:var(--sage);color:#fff;border:none;
+  border-radius:9px;font-size:.84rem;cursor:pointer;margin-top:6px;font-family:'DM Sans',sans-serif;
+  font-weight:700;transition:background .2s;letter-spacing:.02em;}
+.ad-save:hover{background:#164820;}
+.ad-save.secondary{background:rgba(31,92,46,.2);border:1.5px solid var(--sage);color:var(--sage);}
+.ad-save.secondary:hover{background:var(--sage);color:#fff;}
+
+/* Admin box containers */
+.ad-box{background:#111e0e;border-radius:14px;padding:22px;border:1px solid #1a2e16;margin-bottom:18px;}
+.ad-box-title{color:#6a7a66;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;
+  margin-bottom:16px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.ad-box-title::before{content:'';display:inline-block;width:16px;height:2px;background:var(--sage);}
+.ad-info-box{background:#0c1609;border-radius:10px;padding:18px;border:1px solid #1a2e16;color:#3a4e36;font-size:.82rem;line-height:2;}
+.ad-info-box strong{color:#6a7a66;}
+.ad-info-box .tip{color:rgba(212,160,32,.5);font-size:.76rem;}
+
+/* Oil image preview in admin */
+.ad-img-preview{width:100%;height:120px;border-radius:8px;background:#0a110a;
+  border:1.5px solid #1a2e16;display:flex;align-items:center;justify-content:center;
+  margin-bottom:8px;overflow:hidden;position:relative;}
+.ad-img-preview img{width:100%;height:100%;object-fit:cover;display:none;}
+.ad-img-preview span{font-size:2.5rem;position:relative;z-index:1;}
+.ad-img-preview .preview-hint{position:absolute;bottom:6px;font-size:.66rem;color:#3a4e36;
+  letter-spacing:.06em;text-transform:uppercase;}
+
+/* Map shape selector in admin */
+.map-shape-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;}
+.map-shape-opt{background:#0a110a;border:1.5px solid #1a2e16;border-radius:8px;
+  padding:8px 4px;text-align:center;cursor:pointer;transition:all .18s;font-size:.72rem;color:#4a5e46;}
+.map-shape-opt:hover{border-color:var(--sage);}
+.map-shape-opt.sel{border-color:var(--sage);background:rgba(31,92,46,.15);color:var(--cream);}
+.map-shape-opt svg{width:36px;height:28px;margin-bottom:3px;display:block;margin-left:auto;margin-right:auto;}
+
+@media(max-width:1000px){
+  .exp-layout{grid-template-columns:240px 1fr;}
+  .exp-map{display:none;}
+  .pw-compare{grid-template-columns:1fr;}.pw-vs{writing-mode:horizontal-tb;padding:12px;}.pw-vs-text{transform:none;}
+}
+@media(max-width:900px){
+  .exp-layout{grid-template-columns:1fr;}
+  .ad-layout{grid-template-columns:1fr;}
+  .ad-side{display:flex;flex-wrap:wrap;padding:8px;}
+  .ad-nav{padding:7px 10px;border-left:none!important;}
+  .ad-stats{grid-template-columns:1fr 1fr;}
+  .pw-pillars{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:700px){
+  .hero{grid-template-columns:1fr;}.hero-right{height:280px;}
+  .story-grid{grid-template-columns:1fr;}.ft-grid{grid-template-columns:1fr;}
+  .nav-links{display:none;}.ad-grid{grid-template-columns:1fr;}
+  .pw-pillars{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div id="toast">Added!</div>
+
+<!-- CART DRAWER -->
+<div id="cart">
+  <div class="cart-head">
+    <h3>Your Cart</h3>
+    <button class="cart-x" onclick="toggleCart()">&#10005;</button>
+  </div>
+  <div class="cart-body" id="cart-body">
+    <div class="empty-cart"><span>&#128722;</span>Your cart is empty</div>
+  </div>
+  <div class="cart-foot">
+    <div class="cart-total"><span>Total</span><span id="cart-total">&#8377;0</span></div>
+    <button class="chk-btn">Proceed to Checkout &#8594;</button>
+  </div>
+</div>
+
+<!-- VIDEO MODAL -->
+<div id="vmodal">
+  <div class="vm-inner">
+    <div class="vm-head"><span id="vm-title">Video Proof</span><button onclick="closeVM()">&#10005;</button></div>
+    <div class="vm-box"><span>&#127916;</span><p>Authentic farm &amp; cold-press footage</p>
+      <a class="vm-link" id="vm-link" href="#" target="_blank">&#9654; Open Video</a></div>
+  </div>
+</div>
+
+<!-- MAP MODAL -->
+<div id="mmodal">
+  <div class="mm-inner">
+    <div class="mm-head"><span>&#128205; Origin Location</span><button onclick="closeMM()">&#10005;</button></div>
+    <div class="mm-box">
+      <span style="font-size:2.4rem">&#128506;</span>
+      <strong id="mm-region" style="color:var(--sage)">Region</strong>
+      <span>Open Google Maps link below</span>
+    </div>
+    <div style="margin-top:14px">
+      <p style="font-weight:700;color:var(--earth);font-size:.9rem" id="mm-name"></p>
+      <p style="font-family:'DM Mono',monospace;font-size:.72rem;color:#aaa;margin-top:3px" id="mm-coords"></p>
+      <a id="mm-link" href="#" target="_blank" style="color:var(--sage);font-size:.82rem;display:block;margin-top:10px;font-weight:600">&#128205; Open in Google Maps &#8594;</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN LOGIN — Hidden, triggered by 5 taps on bottom dot ══ -->
+<div id="admin-login">
+  <div class="al-box">
+    <h2>&#128274; Admin Panel</h2>
+    <p class="al-sub">Sunsa Organics &#8212; restricted access. Sign in with your admin account.</p>
+    <div id="al-err"></div>
+    <input type="email" id="al-email" placeholder="Admin email&#8230;" autocomplete="off">
+    <input type="password" id="al-input" placeholder="Password&#8230;" onkeydown="if(event.key==='Enter')doFirebaseLogin()">
+    <button class="al-submit" onclick="doFirebaseLogin()">Sign In</button>
+    <button class="al-cancel" onclick="closeLogin()">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ ADMIN DASHBOARD ══ -->
+<div id="admin-dash">
+  <div class="adh">
+    <div class="adh-left">
+      <div class="adh-title">&#9881;&#65039; Sunsa Organics</div>
+      <div class="adh-badge">Admin</div>
+    </div>
+    <div class="adh-right">
+      <span class="adh-tag">Logged in</span>
+      <button class="adh-x" onclick="doFirebaseLogout()">&#10005; Exit Admin</button>
+    </div>
+  </div>
+  <div class="ad-layout">
+    <!-- SIDEBAR -->
+    <div class="ad-side">
+      <div class="ad-side-section">General</div>
+      <div class="ad-nav on" onclick="switchTab('overview')" id="nav-overview"><span>&#128202;</span> Overview</div>
+      <div class="ad-nav" onclick="switchTab('branding')" id="nav-branding"><span>&#127912;</span> Branding &amp; Logo</div>
+      <div class="ad-side-section">Products</div>
+      <div class="ad-nav" onclick="switchTab('products')" id="nav-products"><span>&#128717;</span> Products &amp; Prices</div>
+      <div class="ad-nav" onclick="switchTab('oils')" id="nav-oils"><span>&#129752;</span> Oil Details</div>
+      <div class="ad-side-section">Website</div>
+      <div class="ad-nav" onclick="switchTab('origins')" id="nav-origins"><span>&#127757;</span> Origin Maps</div>
+      <div class="ad-nav" onclick="switchTab('why')" id="nav-why"><span>&#128200;</span> Price Story</div>
+    </div>
+    <!-- MAIN CONTENT -->
+    <div class="ad-main">
+
+      <!-- OVERVIEW TAB -->
+      <div class="ad-tab on" id="tab-overview">
+        <div class="ad-title"><span class="ad-title-icon">&#128202;</span> Dashboard Overview</div>
+        <div class="ad-stats">
+          <div class="ad-stat"><div class="ad-stat-n" id="st-prod">6</div><div class="ad-stat-l">Products</div></div>
+          <div class="ad-stat"><div class="ad-stat-n" id="st-oils">6</div><div class="ad-stat-l">Oils</div></div>
+          <div class="ad-stat"><div class="ad-stat-n" id="st-stock">0</div><div class="ad-stat-l">In Stock</div></div>
+          <div class="ad-stat"><div class="ad-stat-n" id="st-cart">0</div><div class="ad-stat-l">Cart Items</div></div>
+        </div>
+        <div class="ad-info-box">
+          <strong>Admin Guide</strong><br>
+          &#127912; <strong>Branding</strong> &#8212; Change logo image, brand name, tagline<br>
+          &#128717; <strong>Products &amp; Prices</strong> &#8212; Edit price, quantity, product image, description<br>
+          &#129752; <strong>Oil Details</strong> &#8212; Edit oil info, region, GPS, map link, video proof<br>
+          &#127757; <strong>Origin Maps</strong> &#8212; Change which map shape shows for each oil<br>
+          &#128200; <strong>Price Story</strong> &#8212; Edit the "Why Our Prices Are Higher" section text<br><br>
+          <span class="tip">All changes sync to Firestore instantly and appear live on the site.</span>
+        </div>
+      </div>
+
+      <!-- BRANDING TAB -->
+      <div class="ad-tab" id="tab-branding">
+        <div class="ad-title"><span class="ad-title-icon">&#127912;</span> Branding &amp; Logo</div>
+        <div class="ad-box">
+          <div class="ad-box-title">Logo &amp; Brand Name</div>
+          <div class="af-row">
+            <div class="af"><label>Brand Name</label><input id="ab-name" value="Sunsa Organics"></div>
+            <div class="af"><label>Tagline</label><input id="ab-tag" value="Pure Cold Pressed Oils"></div>
+          </div>
+          <div class="af">
+            <label>Logo Image URL (paste direct image link)</label>
+            <input id="ab-logo" placeholder="https://your-domain.com/logo.png">
+          </div>
+          <div class="af">
+            <label>Logo Preview</label>
+            <div class="ad-img-preview" id="logo-preview-wrap">
+              <span id="logo-preview-emoji">&#9728;&#65039;</span>
+              <img id="logo-preview-img" src="" alt="">
+              <span class="preview-hint">Logo preview</span>
+            </div>
+          </div>
+          <div class="af-row">
+            <div class="af"><label>Nav Background Colour</label><input id="ab-navbg" value="#F5EDD6" placeholder="#F5EDD6"></div>
+            <div class="af"><label>Primary Green Colour</label><input id="ab-green" value="#1F5C2E" placeholder="#1F5C2E"></div>
+          </div>
+          <button class="ad-save" onclick="saveBranding()">&#128190; Save Branding</button>
+        </div>
+        <div class="ad-box">
+          <div class="ad-box-title">Hero Section Text</div>
+          <div class="af"><label>Hero Headline (comma separates italic part)</label>
+            <input id="ab-hero-h" value="Pure Cold Pressed Oils, Straight from Nature"></div>
+          <div class="af"><label>Hero Subtext</label>
+            <textarea id="ab-hero-s">100% natural, chemical-free cold pressed oils. No heat, no chemicals &#8212; just pure goodness from farm to bottle.</textarea></div>
+          <button class="ad-save" onclick="saveHero()">&#128190; Save Hero</button>
+        </div>
+      </div>
+
+      <!-- PRODUCTS TAB -->
+      <div class="ad-tab" id="tab-products">
+        <div class="ad-title"><span class="ad-title-icon">&#128717;</span> Products &amp; Prices</div>
+        <div class="ad-grid" id="ad-prod-grid"></div>
+      </div>
+
+      <!-- OIL DETAILS TAB -->
+      <div class="ad-tab" id="tab-oils">
+        <div class="ad-title"><span class="ad-title-icon">&#129752;</span> Oil Details</div>
+        <div class="ad-grid" id="ad-oils-grid"></div>
+      </div>
+
+      <!-- ORIGIN MAPS TAB -->
+      <div class="ad-tab" id="tab-origins">
+        <div class="ad-title"><span class="ad-title-icon">&#127757;</span> Origin Maps</div>
+        <div class="ad-info-box" style="margin-bottom:20px">
+          <strong>How it works:</strong> Each oil shows a map silhouette of its origin region in the Oil Explorer section.
+          Select the correct state/region shape for each oil below.<br>
+          <span class="tip">The shape appears in the right panel of the Origin Explorer when a customer clicks an oil.</span>
+        </div>
+        <div class="ad-grid" id="ad-origins-grid"></div>
+      </div>
+
+      <!-- PRICE STORY TAB -->
+      <div class="ad-tab" id="tab-why">
+        <div class="ad-title"><span class="ad-title-icon">&#128200;</span> Price Story Section</div>
+        <div class="ad-box">
+          <div class="ad-box-title">Section Headline</div>
+          <div class="af"><label>Main Title</label>
+            <input id="pw-title-input" value="Yes, We Cost More."></div>
+          <div class="af"><label>Subtitle / Highlighted Word</label>
+            <input id="pw-sub-input" value="Here&#8217;s Exactly Why."></div>
+          <div class="af"><label>Description Text</label>
+            <textarea id="pw-desc-input">Most oils on the market are refined, chemically processed, and deodorised. Ours are not. Cold pressing is slower, yields less oil per seed, and requires premium raw material &#8212; but it preserves everything nature put in there.</textarea></div>
+          <button class="ad-save" onclick="savePriceStory()">&#128190; Save Price Story</button>
+        </div>
+        <div class="ad-box">
+          <div class="ad-box-title">Comparison Points</div>
+          <p style="font-size:.8rem;color:#4a5e46;margin-bottom:14px">Edit what appears in the "Cheap Refined Oils vs. Sunsa Pure Oils" comparison table.</p>
+          <div id="pw-compare-inputs"></div>
+          <button class="ad-save secondary" onclick="buildPriceComparisons()" style="margin-top:0">&#8635; Reload Inputs</button>
+        </div>
+      </div>
+
+    </div><!-- end ad-main -->
+  </div><!-- end ad-layout -->
+</div><!-- end admin-dash -->
+
+<!-- ════════════════════ MAIN WEBSITE ════════════════════ -->
+
+<!-- NAV -->
+<nav>
+  <div class="logo-wrap">
+    <div class="logo-circle" id="logo-circle">
+      <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="15" r="5" fill="#D4A020"/>
+        <line x1="20" y1="4" x2="20" y2="7" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="20" y1="23" x2="20" y2="26" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="9" y1="15" x2="12" y2="15" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="28" y1="15" x2="31" y2="15" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="12.5" y1="7.5" x2="14.6" y2="9.6" stroke="#D4A020" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="27.5" y1="7.5" x2="25.4" y2="9.6" stroke="#D4A020" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M13 26 Q15.5 20 20 18 Q24.5 20 27 26 Q23 33 20 34 Q17 33 13 26Z" fill="#5a9040"/>
+        <path d="M15.5 24 Q20 22.5 24.5 24" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/>
+      </svg>
+      <img id="logo-img" src="" alt="logo">
+    </div>
+    <div class="logo-name" id="logo-name">Sunsa Organics<small id="logo-tag">Pure Cold Pressed Oils</small></div>
+  </div>
+  <div class="nav-links">
+    <a href="#products">Our Oils</a>
+    <a href="#price-why">Why Higher Price?</a>
+    <a href="#explorer">Origins</a>
+    <a href="#story">Our Story</a>
+  </div>
+  <div class="nav-right">
+    <button class="cart-btn" onclick="toggleCart()">&#128722; Cart <span class="cart-count" id="cart-count">0</span></button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-text">
+    <div class="hero-eyebrow">100% Pure &#183; No Chemicals &#183; Cold Pressed</div>
+    <h1 class="hero-title" id="hero-title">Pure Cold Pressed Oils,<br><em>Straight from Nature</em></h1>
+    <p class="hero-sub" id="hero-sub">100% natural, chemical-free cold pressed oils. No heat, no chemicals &#8212; just pure goodness from farm to bottle.</p>
+    <div class="hero-btns">
+      <button class="btn-p" onclick="scrollToSection('products')">Shop Our Oils</button>
+      <button class="btn-o" onclick="scrollToSection('price-why')">Why Higher Price?</button>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-bottles">
+      <div class="h-bottle"><div class="h-bottle-icon">&#129372;</div><div class="h-bottle-name">Ground Nut</div></div>
+      <div class="h-bottle"><div class="h-bottle-icon">&#129381;</div><div class="h-bottle-name">Coconut</div></div>
+      <div class="h-bottle"><div class="h-bottle-icon">&#127803;</div><div class="h-bottle-name">Sunflower</div></div>
+    </div>
+    <div class="hero-bottles">
+      <div class="h-bottle"><div class="h-bottle-icon">&#11035;</div><div class="h-bottle-name">Mustard</div></div>
+      <div class="h-bottle"><div class="h-bottle-icon">&#127806;</div><div class="h-bottle-name">Sesame</div></div>
+      <div class="h-bottle"><div class="h-bottle-icon">&#127800;</div><div class="h-bottle-name">Safflower</div></div>
+    </div>
+    <div class="hero-badge"><span>&#9989; PURE COLD PRESSED &#183; NO CHEMICALS &#183; 100% NATURAL</span></div>
+  </div>
+</div>
+
+<!-- TRUST BAR -->
+<div class="trust">
+  <div class="trust-item"><span>&#127807;</span> No Chemicals Added</div>
+  <div class="trust-item"><span>&#10052;&#65039;</span> Cold Pressed Only</div>
+  <div class="trust-item"><span>&#127757;</span> Farm Direct Sourcing</div>
+  <div class="trust-item"><span>&#127753;</span> 1 Ltr per Bottle</div>
+  <div class="trust-item"><span>&#128666;</span> Fast Delivery</div>
+</div>
+
+<!-- PRODUCTS -->
+<section id="products">
+  <div class="prod-header">
+    <div>
+      <div class="sec-label">Our Collection</div>
+      <h2 class="sec-title">6 Pure Cold Pressed Oils</h2>
+      <p class="sec-sub">No heat, no chemicals, no compromise. Every bottle is 1 Ltr of nature&#8217;s finest.</p>
+    </div>
+  </div>
+  <div class="prod-grid" id="prod-grid"></div>
+</section>
+
+<!-- ══════════ PRICE JUSTIFICATION SECTION ══════════ -->
+<section id="price-why">
+  <div style="position:relative;z-index:1">
+    <div class="pw-header">
+      <div class="pw-eyebrow">Transparency</div>
+      <h2 class="pw-title" id="pw-main-title">Yes, We Cost More. <span id="pw-main-sub">Here&#8217;s Exactly Why.</span></h2>
+      <p class="pw-sub" id="pw-main-desc">Most oils on the market are refined, chemically processed, and deodorised. Ours are not. Cold pressing is slower, yields less oil per seed, and requires premium raw material &#8212; but it preserves everything nature put in there.</p>
+    </div>
+
+    <!-- COMPARISON TABLE -->
+    <div class="pw-compare" id="pw-compare-table">
+      <div class="pw-col cheap">
+        <div class="pw-col-label">&#10060; Cheap Refined Oils</div>
+        <div id="pw-cheap-list">
+          <div class="pw-item"><span class="pw-item-icon">&#128293;</span><span>Solvent-extracted with hexane chemicals</span></div>
+          <div class="pw-item"><span class="pw-item-icon">&#128293;</span><span>Heated to 200°C+ destroying all nutrients</span></div>
+          <div class="pw-item"><span class="pw-item-icon">&#128293;</span><span>Bleached and deodorised to mask quality</span></div>
+          <div class="pw-item"><span class="pw-item-icon">&#128293;</span><span>Preservatives and additives added</span></div>
+          <div class="pw-item"><span class="pw-item-icon">&#128293;</span><span>Yields 99% from low-quality seeds</span></div>
+          <div class="pw-item"><span class="pw-item-icon">&#128293;</span><span>No traceability to origin farm</span></div>
+        </div>
+      </div>
+      <div class="pw-vs"><div class="pw-vs-text">VS</div></div>
+      <div class="pw-col pure">
+        <div class="pw-col-label">&#9989; Sunsa Pure Cold Pressed</div>
+        <div id="pw-pure-list">
+          <div class="pw-item"><span class="pw-item-icon">&#10024;</span><span>Mechanical press only &#8212; zero chemicals</span></div>
+          <div class="pw-item"><span class="pw-item-icon">&#10024;</span><span>Never exceeds 40°C &#8212; full nutrition intact</span></div>
+          <div class="pw-item"><span class="pw-item-icon">&#10024;</span><span>Natural colour &amp; aroma &#8212; nothing to hide</span></div>
+          <div class="pw-item"><span class="pw-item-icon">&#10024;</span><span>Zero additives, zero preservatives</span></div>
+          <div class="pw-item"><span class="pw-item-icon">&#10024;</span><span>30-40% lower yield = higher cost, higher purity</span></div>
+          <div class="pw-item"><span class="pw-item-icon">&#10024;</span><span>GI-tagged single origin &#8212; fully traceable</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VALUE PILLARS -->
+    <div class="pw-pillars">
+      <div class="pw-pill">
+        <div class="pw-pill-icon">&#9881;&#65039;</div>
+        <div class="pw-pill-title">Wooden Cold Press</div>
+        <div class="pw-pill-desc">Traditional wooden press machines run slow and cool, protecting every nutrient in the oil.</div>
+      </div>
+      <div class="pw-pill">
+        <div class="pw-pill-icon">&#127807;</div>
+        <div class="pw-pill-title">Premium Raw Seeds</div>
+        <div class="pw-pill-desc">We source only the top grade seeds from verified single-origin farmers across India.</div>
+      </div>
+      <div class="pw-pill">
+        <div class="pw-pill-icon">&#128203;</div>
+        <div class="pw-pill-title">Lab Tested Every Batch</div>
+        <div class="pw-pill-desc">Every batch is tested for purity, heavy metals, and pesticide residues before bottling.</div>
+      </div>
+      <div class="pw-pill">
+        <div class="pw-pill-icon">&#127820;</div>
+        <div class="pw-pill-title">Lower Yield = Higher Cost</div>
+        <div class="pw-pill-desc">Cold pressing 1 Ltr of oil takes up to 3x the seeds vs. solvent extraction. That cost is real.</div>
+      </div>
+      <div class="pw-pill">
+        <div class="pw-pill-icon">&#127759;</div>
+        <div class="pw-pill-title">GI Tagged Origins</div>
+        <div class="pw-pill-desc">Every oil traces back to a certified GI-tagged region &#8212; you know exactly where your food comes from.</div>
+      </div>
+      <div class="pw-pill">
+        <div class="pw-pill-icon">&#128170;</div>
+        <div class="pw-pill-title">Full Nutrition, No Compromise</div>
+        <div class="pw-pill-desc">Omega-3s, Vitamin E, polyphenols &#8212; everything stays intact because we never use heat.</div>
+      </div>
+    </div>
+
+    <!-- BOTTOM ASSURANCE STRIP -->
+    <div class="pw-strip">
+      <div class="pw-strip-text">
+        <h3>You&#8217;re not paying more. You&#8217;re paying right.</h3>
+        <p>Every rupee extra goes toward better seeds, slower pressing, stricter testing, and supporting the farmers who grow without shortcuts.</p>
+      </div>
+      <div class="pw-strip-badges">
+        <div class="pw-badge">&#10052;&#65039; Cold Pressed Only</div>
+        <div class="pw-badge">&#128683; Zero Chemicals</div>
+        <div class="pw-badge gold">&#9989; 100% Traceable</div>
+        <div class="pw-badge gold">&#127807; Lab Verified</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OIL ORIGIN EXPLORER — matching screenshot style -->
+<section id="explorer" style="background:var(--cream);">
+  <div class="sec-label">Origin Stories</div>
+  <h2 class="sec-title">Single Origin Oils <span style="font-size:.75em;color:var(--sage2)">(GI Tagged)</span></h2>
+  <div class="explorer-dashes"><span></span><span></span><span></span></div>
+
+  <div class="exp-layout">
+    <!-- LEFT: oil list -->
+    <div class="exp-list" id="exp-list"></div>
+
+    <!-- CENTRE: info card -->
+    <div class="exp-info" id="exp-info">
+      <h2 id="ei-name" style="color:#ccc;font-size:1.5rem">Select an Oil</h2>
+      <div class="exp-from" id="ei-from">Click any oil from the list &#8594;</div>
+      <p class="exp-desc" id="ei-desc">Discover the origin, story, and process behind every Sunsa oil.</p>
+      <div class="exp-price-row" id="ei-price-row" style="display:none">
+        <div class="exp-price" id="ei-price"></div>
+        <div class="exp-price-size">/ 1 Ltr</div>
+      </div>
+      <div class="exp-btns" id="ei-btns"></div>
+    </div>
+
+    <!-- RIGHT: map panel — cream bg with state silhouette (matches screenshot) -->
+    <div class="exp-map" id="exp-map">
+      <div class="exp-map-leaf"></div>
+      <div class="exp-map-leaf"></div>
+      <div class="map-inner">
+        <div id="map-display">
+          <div style="font-size:5rem;text-align:center">&#127758;</div>
+          <div style="color:var(--sage2);font-weight:700;font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;text-align:center;margin-top:12px">Select an oil<br>to see origin</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY COLD PRESSED -->
+<section id="why">
+  <div class="sec-label">The Difference</div>
+  <h2 class="sec-title">Why Cold Pressed?</h2>
+  <div class="why-grid">
+    <div class="why-card">
+      <div class="why-icon">&#127777;&#65039;</div>
+      <div class="why-title">No Heat, No Damage</div>
+      <div class="why-desc">Cold pressing uses no heat, preserving all vitamins, antioxidants, and fatty acids that are destroyed in refined oils.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">&#128683;</div>
+      <div class="why-title">Zero Chemicals</div>
+      <div class="why-desc">No hexane, no solvents, no bleaching. Just pure mechanical pressing &#8212; exactly as nature intended.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">&#127807;</div>
+      <div class="why-title">Full Nutrition</div>
+      <div class="why-desc">Retains natural flavour, aroma, and 100% of the nutritional profile &#8212; omega-3s, vitamin E, polyphenols and more.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">&#129408;</div>
+      <div class="why-title">Better for Health</div>
+      <div class="why-desc">No trans-fats, no additives. Pure cold pressed oils support heart health, immunity and overall wellness.</div>
+    </div>
+  </div>
+</section>
+
+<!-- STORY -->
+<section id="story">
+  <div class="story-grid">
+    <div>
+      <div class="sec-label">Our Story</div>
+      <h2 class="sec-title" style="color:var(--cream)">Rooted in Tradition,<br><em>Pressed with Purpose</em></h2>
+      <p class="sec-sub">Sunsa Organics was founded on a simple truth: the best oils come from the best seeds, pressed the right way. We work directly with farmers to bring you six pure, cold pressed oils &#8212; no middlemen, no compromise.</p>
+      <div class="story-stats">
+        <div class="stat-box"><div class="stat-n">6</div><div class="stat-l">Pure Oils</div></div>
+        <div class="stat-box"><div class="stat-n">1 Ltr</div><div class="stat-l">Every Bottle</div></div>
+        <div class="stat-box"><div class="stat-n">0</div><div class="stat-l">Chemicals</div></div>
+        <div class="stat-box"><div class="stat-n">100%</div><div class="stat-l">Natural</div></div>
+      </div>
+    </div>
+    <div class="story-visual">
+      <div class="sv-grid">
+        <div class="sv-oil">Ground Nut</div><div class="sv-oil">Coconut</div>
+        <div class="sv-oil">Sunflower</div><div class="sv-oil">Mustard Black</div>
+        <div class="sv-oil">Sesame</div><div class="sv-oil">Safflower</div>
+      </div>
+      <div style="font-size:3rem;margin:8px 0">&#9728;&#65039;</div>
+      <div class="sv-badge">PURE COLD PRESSED</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="ft-grid">
+    <div class="ft-brand">
+      <div class="logo-name" style="color:var(--cream)">Sunsa Organics<small style="color:var(--gold)">Pure Cold Pressed Oils</small></div>
+      <p>Six pure cold pressed oils &#8212; no chemicals, no heat, no compromise. From Indian farms to your kitchen.</p>
+      <div class="ft-certs">
+        <span class="ft-cert">No Chemicals</span>
+        <span class="ft-cert">Cold Pressed</span>
+        <span class="ft-cert">100% Natural</span>
+      </div>
+    </div>
+    <div class="ft-col">
+      <h5>Our Oils</h5>
+      <a href="#products">Ground Nut Oil</a><a href="#products">Coconut Oil</a>
+      <a href="#products">Sunflower Oil</a><a href="#products">Mustard (Black) Oil</a>
+      <a href="#products">Sesame Oil</a><a href="#products">Safflower Oil</a>
+    </div>
+    <div class="ft-col">
+      <h5>Support</h5>
+      <a href="#">Contact Us</a><a href="#">Shipping Info</a>
+      <a href="#">Returns</a><a href="#">Bulk Orders</a>
+    </div>
+  </div>
+  <div class="ft-bottom">
+    <span id="ft-year">&#169; 2025 Sunsa Organics. All rights reserved.</span>
+    <span>Made with &#127807; Pure Cold Pressed Goodness</span>
+  </div>
+</footer>
+
+<!-- HIDDEN ADMIN TRIGGER — invisible dot, click 5x fast -->
+<div id="admin-trigger">
+  <div id="admin-dot" onclick="secretTap()"></div>
+</div>
+
+<script>
+// ════════════ DATA ════════════
+let products=[
+  {id:1,name:"Ground Nut Oil",desc:"Pure cold pressed groundnut oil &#8212; rich, nutty flavour perfect for everyday Indian cooking.",price:"&#8377;350",priceNum:350,origin:"Andhra Pradesh, India",badge:"Best Seller",emoji:"&#129372;",img:"",qty:100},
+  {id:2,name:"Coconut Oil",desc:"Cold pressed virgin coconut oil &#8212; naturally sweet aroma, ideal for cooking, hair and skin care.",price:"&#8377;420",priceNum:420,origin:"Kerala, India",badge:"Pure Virgin",emoji:"&#129381;",img:"",qty:80},
+  {id:3,name:"Sunflower Oil",desc:"Light cold pressed sunflower oil &#8212; mild flavour, high in Vitamin E and heart-healthy fatty acids.",price:"&#8377;290",priceNum:290,origin:"Karnataka, India",badge:"Heart Healthy",emoji:"&#127803;",img:"",qty:120},
+  {id:4,name:"Mustard (Black) Oil",desc:"Pungent cold pressed black mustard oil &#8212; authentic taste for pickles, dressings and North Indian cooking.",price:"&#8377;320",priceNum:320,origin:"Rajasthan, India",badge:"Authentic",emoji:"&#11035;",img:"",qty:90},
+  {id:5,name:"Sesame Oil",desc:"Golden cold pressed sesame oil &#8212; rich nutty aroma, packed with antioxidants, calcium and minerals.",price:"&#8377;480",priceNum:480,origin:"Rajasthan, India",badge:"Antioxidant Rich",emoji:"&#127806;",img:"",qty:75},
+  {id:6,name:"Safflower Oil",desc:"Light cold pressed safflower oil &#8212; high in linoleic acid, great for high-heat cooking and salads.",price:"&#8377;380",priceNum:380,origin:"Maharashtra, India",badge:"High Oleic",emoji:"&#127800;",img:"",qty:60},
+];
+
+let oils=[
+  {id:1,productId:1,name:"Ground Nut Oil",region:"Andhra Pradesh",desc:"Cold pressed from premium groundnut seeds sourced directly from Andhra Pradesh farmers. Rich in Vitamin E, monounsaturated fats and natural antioxidants. Traditional wooden-press process preserves full nutrition.",emoji:"&#129372;",img:"",map:"https://maps.google.com/?q=Andhra+Pradesh+India",video:"",coords:"15.9129&#176; N, 79.7400&#176; E",price:"&#8377;350",priceNum:350,shape:"andhra"},
+  {id:2,productId:2,name:"Coconut Oil",region:"Kerala",desc:"Virgin coconut oil cold pressed from fresh coconut kernels in Kerala&#8217;s coastal farms. No heat, no chemicals &#8212; pure white coconut goodness with natural tropical aroma.",emoji:"&#129381;",img:"",map:"https://maps.google.com/?q=Kerala+India",video:"",coords:"10.8505&#176; N, 76.2711&#176; E",price:"&#8377;420",priceNum:420,shape:"kerala"},
+  {id:3,productId:3,name:"Sunflower Oil",region:"Karnataka",desc:"Cold pressed from premium sunflower seeds grown in Karnataka&#8217;s sunflower belt. Light golden oil rich in Vitamin E and polyunsaturated fatty acids.",emoji:"&#127803;",img:"",map:"https://maps.google.com/?q=Karnataka+India",video:"",coords:"15.3173&#176; N, 75.7139&#176; E",price:"&#8377;290",priceNum:290,shape:"karnataka"},
+  {id:4,productId:4,name:"Mustard (Black) Oil",region:"Rajasthan",desc:"Cold pressed from authentic black mustard seeds from Rajasthan. Strong pungent aroma &#8212; the backbone of North Indian and Bengali cuisine. Used in pickling and tempering.",emoji:"&#11035;",img:"",map:"https://maps.google.com/?q=Rajasthan+India",video:"",coords:"27.0238&#176; N, 74.2179&#176; E",price:"&#8377;320",priceNum:320,shape:"rajasthan"},
+  {id:5,productId:5,name:"Sesame Oil",region:"Rajasthan",desc:"Cold pressed from hulled white sesame seeds. Rich in sesamin and sesamolin antioxidants, calcium, iron and zinc. Deep nutty fragrance and golden colour.",emoji:"&#127806;",img:"",map:"https://maps.google.com/?q=Rajasthan+India",video:"",coords:"27.0238&#176; N, 74.2179&#176; E",price:"&#8377;480",priceNum:480,shape:"rajasthan"},
+  {id:6,productId:6,name:"Safflower Oil",region:"Maharashtra",desc:"Cold pressed from safflower seeds harvested in Maharashtra. One of the highest linoleic acid contents among cooking oils &#8212; ideal for heart health.",emoji:"&#127800;",img:"",map:"https://maps.google.com/?q=Maharashtra+India",video:"",coords:"19.7515&#176; N, 75.7139&#176; E",price:"&#8377;380",priceNum:380,shape:"maharashtra"},
+];
+
+// ════════════ MAP SHAPES — Indian state silhouettes ════════════
+const shapes={
+  andhra:`<svg viewBox="0 0 200 260"><path d="M60,20 L140,18 L165,55 L168,100 L155,145 L135,180 L108,210 L85,225 L62,215 L42,188 L28,152 L22,108 L28,65Z" fill="#1F5C2E"/><text x="100" y="130" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="DM Sans,sans-serif">ANDHRA</text><text x="100" y="148" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="DM Sans,sans-serif">PRADESH</text></svg>`,
+  kerala:`<svg viewBox="0 0 100 280"><path d="M55,15 L70,35 L74,70 L70,110 L65,150 L60,190 L52,230 L44,255 L36,260 L30,245 L34,205 L38,165 L42,125 L46,85 L48,45Z" fill="#1F5C2E"/><text x="52" y="138" text-anchor="middle" fill="white" font-size="11" font-weight="800" font-family="DM Sans,sans-serif">KERALA</text></svg>`,
+  karnataka:`<svg viewBox="0 0 220 240"><path d="M35,55 L100,18 L155,20 L188,50 L195,95 L185,140 L165,175 L140,200 L108,215 L78,210 L50,190 L28,160 L18,118 L22,78Z" fill="#1F5C2E"/><text x="108" y="118" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="DM Sans,sans-serif">KARNATAKA</text></svg>`,
+  rajasthan:`<svg viewBox="0 0 260 240"><path d="M25,80 L75,25 L145,15 L205,30 L238,68 L242,115 L228,158 L195,188 L155,205 L108,208 L68,198 L35,172 L15,135Z" fill="#1F5C2E"/><text x="130" y="112" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="DM Sans,sans-serif">RAJASTHAN</text></svg>`,
+  maharashtra:`<svg viewBox="0 0 260 220"><path d="M22,88 L72,28 L138,15 L195,25 L232,62 L238,108 L222,148 L188,178 L148,195 L105,198 L65,188 L32,162 L12,125Z" fill="#1F5C2E"/><text x="128" y="108" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="DM Sans,sans-serif">MAHARASHTRA</text></svg>`,
+  india_s:`<svg viewBox="0 0 180 240"><path d="M48,18 L128,13 L153,48 L158,88 L148,128 L128,158 L98,198 L78,218 L58,208 L38,178 L23,138 L18,98 L23,58Z" fill="#1F5C2E"/><text x="88" y="110" text-anchor="middle" fill="white" font-size="12" font-weight="800" font-family="DM Sans,sans-serif">INDIA</text></svg>`,
+  india_n:`<svg viewBox="0 0 220 160"><path d="M18,78 L58,18 L118,8 L173,28 L193,63 L183,98 L153,128 L108,143 L68,138 L33,118Z" fill="#1F5C2E"/><text x="106" y="80" text-anchor="middle" fill="white" font-size="12" font-weight="800" font-family="DM Sans,sans-serif">INDIA</text></svg>`,
+};
+
+const shapeNames={
+  andhra:"Andhra Pradesh",kerala:"Kerala",karnataka:"Karnataka",
+  rajasthan:"Rajasthan",maharashtra:"Maharashtra",
+  india_s:"India (South)",india_n:"India (North)"
+};
+
+// ════════════ BRAND LOGO SVG ════════════
+const logoSVG=`<svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="15" r="5" fill="#D4A020"/><line x1="20" y1="4" x2="20" y2="7" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="20" y1="23" x2="20" y2="26" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="9" y1="15" x2="12" y2="15" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="28" y1="15" x2="31" y2="15" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="12.5" y1="7.5" x2="14.6" y2="9.6" stroke="#D4A020" stroke-width="1.5" stroke-linecap="round"/><line x1="27.5" y1="7.5" x2="25.4" y2="9.6" stroke="#D4A020" stroke-width="1.5" stroke-linecap="round"/><path d="M13 26 Q15.5 20 20 18 Q24.5 20 27 26 Q23 33 20 34 Q17 33 13 26Z" fill="#5a9040"/></svg>`;
+
+// ════════════ RENDER PRODUCTS ════════════
+function renderProducts(){
+  document.getElementById('prod-grid').innerHTML=products.map(p=>`
+    <div class="prod-card${p.qty===0?' oos':''}">
+      <div class="prod-top-band">
+        <div class="ptb-logo">${logoSVG}<div><div class="ptb-brand">SUNSA</div><div class="ptb-sub">ORGANICS</div></div></div>
+      </div>
+      <div class="prod-img">
+        ${p.img?`<img src="${p.img}" alt="${p.name}" onerror="this.style.display='none'">`:''}
+        <span class="emoji-fb">${p.emoji}</span>
+        <div class="prod-badge">${p.qty===0?'Out of Stock':p.badge}</div>
+        ${p.qty>0?`<div class="prod-qty-tag">Qty: ${p.qty}</div>`:''}
+      </div>
+      <div class="prod-body">
+        <div class="prod-name">${p.name}</div>
+        <div class="prod-size">1 Ltr &#183; Pure Cold Pressed</div>
+        <div class="prod-desc">${p.desc}</div>
+        <div style="font-size:.68rem;color:var(--sage2);font-weight:600;margin-bottom:4px">&#128205; ${p.origin}</div>
+      </div>
+      <div class="prod-footer">
+        <div class="prod-price">${p.price}</div>
+        <button class="add-btn" onclick="addCart(${p.id})" ${p.qty===0?'disabled':''}>
+          ${p.qty===0?'Out of Stock':'Add to Cart'}
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+// ════════════ OIL EXPLORER ════════════
+let activeOil=null;
+function renderExpList(){
+  document.getElementById('exp-list').innerHTML=oils.map(o=>`
+    <div class="exp-item${activeOil===o.id?' active':''}" onclick="pickOil(${o.id})">
+      <div class="exp-letter">
+        ${o.img?`<img src="${o.img}" onerror="this.outerHTML='<span style=\\'font-size:1.1rem\\'>${o.emoji}</span>'">`:`<span style="font-size:1.1rem">${o.emoji}</span>`}
+      </div>
+      <div>
+        <div class="exp-item-name">${o.name}</div>
+        <div class="exp-item-region">&#128205; ${o.region}</div>
+      </div>
+    </div>`).join('');
+}
+
+function pickOil(id){
+  activeOil=id;
+  const o=oils.find(x=>x.id===id);
+  renderExpList();
+  document.getElementById('ei-name').textContent=o.name;
+  document.getElementById('ei-name').style.color='';
+  document.getElementById('ei-from').textContent='From '+o.region;
+  document.getElementById('ei-desc').textContent=o.desc;
+  const pr=document.getElementById('ei-price');
+  const prRow=document.getElementById('ei-price-row');
+  pr.textContent=o.price; prRow.style.display='flex';
+  document.getElementById('ei-btns').innerHTML=`
+    <button class="exp-btn map" onclick="openMM(${o.id})">&#128205; View Origin</button>
+    ${o.video?`<button class="exp-btn vid" onclick="openVM(${o.id})">&#9654; Video Proof</button>`:''}
+    <button class="exp-btn buy" onclick="addCartByOilId(${o.id})">&#128722; Buy Now</button>`;
+  // Render state map silhouette
+  const svg=shapes[o.shape]||shapes['india_s'];
+  document.getElementById('map-display').innerHTML=`
+    <div class="map-svg-wrap">${svg}</div>
+    <div class="map-region-label">${o.region}</div>`;
+}
+
+function addCartByOilId(oilId){
+  const o=oils.find(x=>x.id===oilId);
+  if(!o||!o.productId){toast('Not available in shop yet');return;}
+  const p=products.find(x=>x.id===o.productId&&x.qty>0);
+  if(p)addCart(p.id);else toast('Out of stock');
+}
+
+// ════════════ MAP & VIDEO MODALS ════════════
+function openMM(id){
+  const o=oils.find(x=>x.id===id);
+  document.getElementById('mm-region').textContent=o.region;
+  document.getElementById('mm-name').textContent=o.name;
+  document.getElementById('mm-coords').textContent=o.coords||'';
+  document.getElementById('mm-link').href=o.map||'#';
+  document.getElementById('mmodal').classList.add('open');
+}
+function closeMM(){document.getElementById('mmodal').classList.remove('open');}
+function openVM(id){
+  const o=oils.find(x=>x.id===id);
+  document.getElementById('vm-title').textContent='Video &#8212; '+o.name;
+  document.getElementById('vm-link').href=o.video||'#';
+  document.getElementById('vmodal').classList.add('open');
+}
+function closeVM(){document.getElementById('vmodal').classList.remove('open');}
+['mmodal','vmodal'].forEach(id=>document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+
+// ════════════ CART ════════════
+let cartItems=[];
+function addCart(id){
+  const p=products.find(x=>x.id===id);if(!p||p.qty===0)return;
+  const ex=cartItems.find(x=>x.id===id);
+  if(ex)ex.qty++;else cartItems.push({...p,qty:1});
+  updateCart();toast('&#128722; '+p.name+' added!');
+}
+function removeCart(id){cartItems=cartItems.filter(x=>x.id!==id);updateCart();}
+function updateCart(){
+  const cnt=cartItems.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('cart-count').textContent=cnt;
+  if(document.getElementById('st-cart'))document.getElementById('st-cart').textContent=cnt;
+  const body=document.getElementById('cart-body');
+  if(!cartItems.length){body.innerHTML='<div class="empty-cart"><span>&#128722;</span>Your cart is empty</div>';
+    document.getElementById('cart-total').innerHTML='&#8377;0';return;}
+  body.innerHTML=cartItems.map(i=>`
+    <div class="ci">
+      <div class="ci-icon">${i.emoji}</div>
+      <div style="flex:1"><div class="ci-name">${i.name}${i.qty>1?' &#215;'+i.qty:''}</div><div class="ci-price">${i.price} / 1 Ltr</div></div>
+      <button class="ci-rm" onclick="removeCart(${i.id})">&#10005;</button>
+    </div>`).join('');
+  const tot=cartItems.reduce((s,i)=>s+(i.priceNum||0)*i.qty,0);
+  document.getElementById('cart-total').textContent='&#8377;'+tot.toLocaleString('en-IN');
+}
+function toggleCart(){document.getElementById('cart').classList.toggle('open');}
+
+// ════════════ TOAST ════════════
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast');t.innerHTML=msg;t.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);
+}
+function scrollToSection(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth'});}
+
+// ════════════ SECRET ADMIN (5 taps on bottom dot) ════════════
+let taps=0,tapT;
+function secretTap(){
+  taps++;clearTimeout(tapT);
+  tapT=setTimeout(()=>taps=0,1800);
+  if(taps>=5){taps=0;openLogin();}
+}
+function openLogin(){
+  document.getElementById('admin-login').classList.add('open');
+  document.getElementById('al-email').value='';
+  document.getElementById('al-input').value='';
+  document.getElementById('al-err').style.display='none';
+  setTimeout(()=>document.getElementById('al-email').focus(),120);
+}
+function closeLogin(){document.getElementById('admin-login').classList.remove('open');}
+function openAdmin(){
+  document.getElementById('admin-dash').classList.add('open');
+  refreshAdminStats();buildProdCards();buildOilCards();buildOriginsGrid();buildPriceComparisons();
+  document.getElementById('ab-name').value=document.getElementById('logo-name').childNodes[0].textContent.trim();
+}
+function closeAdmin(){document.getElementById('admin-dash').classList.remove('open');}
+function switchTab(name){
+  document.querySelectorAll('.ad-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.ad-nav').forEach(n=>n.classList.remove('on'));
+  document.getElementById('tab-'+name).classList.add('on');
+  document.getElementById('nav-'+name).classList.add('on');
+}
+function refreshAdminStats(){
+  document.getElementById('st-prod').textContent=products.length;
+  document.getElementById('st-oils').textContent=oils.length;
+  document.getElementById('st-stock').textContent=products.filter(p=>p.qty>0).length;
+  document.getElementById('st-cart').textContent=cartItems.reduce((s,i)=>s+i.qty,0);
+}
+
+// ════════════ ADMIN: BRANDING ════════════
+function saveBranding(){
+  const nm=document.getElementById('ab-name').value;
+  const tg=document.getElementById('ab-tag').value;
+  const lg=document.getElementById('ab-logo').value;
+  document.getElementById('logo-name').childNodes[0].textContent=nm;
+  document.getElementById('logo-tag').textContent=tg;
+  if(lg){
+    document.getElementById('logo-img').src=lg;document.getElementById('logo-img').style.display='block';
+    document.getElementById('logo-preview-img').src=lg;document.getElementById('logo-preview-img').style.display='block';
+    document.getElementById('logo-preview-emoji').style.display='none';
+  }else{
+    document.getElementById('logo-img').style.display='none';
+    document.getElementById('logo-preview-img').style.display='none';
+    document.getElementById('logo-preview-emoji').style.display='';
+  }
+  // Apply colour overrides
+  const green=document.getElementById('ab-green').value;
+  if(green)document.documentElement.style.setProperty('--sage',green);
+  toast('&#9989; Branding saved!');
+}
+function saveHero(){
+  const raw=document.getElementById('ab-hero-h').value;
+  const parts=raw.split(',');
+  const html=parts.length>1?parts[0]+',<br><em>'+parts.slice(1).join(',').trim()+'</em>':raw;
+  document.getElementById('hero-title').innerHTML=html;
+  document.getElementById('hero-sub').textContent=document.getElementById('ab-hero-s').value;
+  toast('&#9989; Hero updated!');
+}
+// Live logo URL preview
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('ab-logo')?.addEventListener('input',function(){
+    const v=this.value;
+    if(v){document.getElementById('logo-preview-img').src=v;document.getElementById('logo-preview-img').style.display='block';
+      document.getElementById('logo-preview-emoji').style.display='none';}
+    else{document.getElementById('logo-preview-img').style.display='none';
+      document.getElementById('logo-preview-emoji').style.display='';}
+  });
+});
+
+// ════════════ ADMIN: PRODUCTS ════════════
+function buildProdCards(){
+  document.getElementById('ad-prod-grid').innerHTML=products.map(p=>`
+    <div class="ad-card">
+      <div class="ad-card-top">
+        <div class="ad-icon" id="adpi-${p.id}">
+          ${p.img?`<img src="${p.img}" alt="">`:`<span>${p.emoji}</span>`}
+        </div>
+        <div>
+          <div class="ad-card-name">${p.name}</div>
+          <div class="ad-card-sub">${p.price} &middot; Qty: ${p.qty}</div>
+        </div>
+      </div>
+      <div class="af">
+        <label>Product Image URL</label>
+        <div class="ad-img-preview" id="prod-img-prev-${p.id}">
+          ${p.img?`<img src="${p.img}" style="display:block" alt="">`:`<span>${p.emoji}</span>`}
+          <span class="preview-hint">Image preview</span>
+        </div>
+        <input id="ap-i-${p.id}" value="${p.img||''}" placeholder="https://...jpg or png" oninput="previewProdImg(${p.id},this.value)">
+      </div>
+      <div class="af-row">
+        <div class="af"><label>Name</label><input id="ap-n-${p.id}" value="${p.name}"></div>
+        <div class="af"><label>Price (&#8377;)</label><input type="number" id="ap-p-${p.id}" value="${p.priceNum||0}"></div>
+      </div>
+      <div class="af-row">
+        <div class="af"><label>Quantity</label><input type="number" id="ap-q-${p.id}" value="${p.qty}" min="0"></div>
+        <div class="af"><label>Badge Text</label><input id="ap-b-${p.id}" value="${p.badge}"></div>
+      </div>
+      <div class="af"><label>Origin Location</label><input id="ap-o-${p.id}" value="${p.origin}"></div>
+      <div class="af"><label>Description</label><textarea id="ap-d-${p.id}">${p.desc}</textarea></div>
+      <div class="af"><label>Emoji (fallback when no image)</label><input id="ap-e-${p.id}" value="${p.emoji}" maxlength="3"></div>
+      <button class="ad-save" onclick="saveProd(${p.id})">&#128190; Save Product</button>
+    </div>`).join('');
+}
+function previewProdImg(id,url){
+  const wrap=document.getElementById('prod-img-prev-'+id);
+  if(!wrap)return;
+  if(url){wrap.innerHTML=`<img src="${url}" style="display:block" onerror="this.style.display='none'" alt=""><span class="preview-hint">Image preview</span>`;}
+  else{const p=products.find(x=>x.id===id);wrap.innerHTML=`<span>${p?p.emoji:''}</span><span class="preview-hint">Image preview</span>`;}
+}
+async function saveProd(id){
+  const p=products.find(x=>x.id===id);
+  p.name=document.getElementById(`ap-n-${id}`).value;
+  p.priceNum=parseFloat(document.getElementById(`ap-p-${id}`).value)||0;
+  p.price='&#8377;'+p.priceNum.toLocaleString('en-IN');
+  p.qty=parseInt(document.getElementById(`ap-q-${id}`).value)||0;
+  p.badge=document.getElementById(`ap-b-${id}`).value;
+  p.origin=document.getElementById(`ap-o-${id}`).value;
+  p.desc=document.getElementById(`ap-d-${id}`).value;
+  p.img=document.getElementById(`ap-i-${id}`).value;
+  p.emoji=document.getElementById(`ap-e-${id}`).value||p.emoji;
+  renderProducts();refreshAdminStats();buildProdCards();
+  if(window.saveProductToFirebase){
+    try{await window.saveProductToFirebase(p);toast('&#9989; '+p.name+' saved to cloud!');}
+    catch(e){toast('&#9989; '+p.name+' updated (offline)');}
+  }else{toast('&#9989; '+p.name+' updated!');}
+}
+
+// ════════════ ADMIN: OIL DETAILS ════════════
+function buildOilCards(){
+  document.getElementById('ad-oils-grid').innerHTML=oils.map(o=>`
+    <div class="ad-card">
+      <div class="ad-card-top">
+        <div class="ad-icon">
+          ${o.img?`<img src="${o.img}" alt="">`:`<span>${o.emoji}</span>`}
+        </div>
+        <div>
+          <div class="ad-card-name">${o.name}</div>
+          <div class="ad-card-sub">&#128205; ${o.region}</div>
+        </div>
+      </div>
+      <div class="af">
+        <label>Oil Image URL</label>
+        <div class="ad-img-preview" id="oil-img-prev-${o.id}">
+          ${o.img?`<img src="${o.img}" style="display:block" alt="">`:`<span>${o.emoji}</span>`}
+          <span class="preview-hint">Image preview</span>
+        </div>
+        <input id="ao-i-${o.id}" value="${o.img||''}" placeholder="https://...jpg" oninput="previewOilImg(${o.id},this.value)">
+      </div>
+      <div class="af-row">
+        <div class="af"><label>Oil Name</label><input id="ao-n-${o.id}" value="${o.name}"></div>
+        <div class="af"><label>Price (&#8377;)</label><input type="number" id="ao-p-${o.id}" value="${o.priceNum||0}"></div>
+      </div>
+      <div class="af"><label>Region / State</label><input id="ao-r-${o.id}" value="${o.region}"></div>
+      <div class="af"><label>Description</label><textarea id="ao-d-${o.id}">${o.desc}</textarea></div>
+      <div class="af"><label>GPS Coordinates</label><input id="ao-c-${o.id}" value="${o.coords||''}" placeholder="15.91&#176; N, 79.74&#176; E"></div>
+      <div class="af"><label>Google Maps Link</label><input id="ao-m-${o.id}" value="${o.map||''}" placeholder="https://maps.google.com/?q=..."></div>
+      <div class="af"><label>Video Proof URL (YouTube)</label><input id="ao-v-${o.id}" value="${o.video||''}" placeholder="https://youtube.com/watch?v=..."></div>
+      <div class="af"><label>Emoji (fallback)</label><input id="ao-em-${o.id}" value="${o.emoji}" maxlength="3"></div>
+      <button class="ad-save" onclick="saveOil(${o.id})">&#128190; Save Oil</button>
+    </div>`).join('');
+}
+function previewOilImg(id,url){
+  const wrap=document.getElementById('oil-img-prev-'+id);
+  if(!wrap)return;
+  if(url){wrap.innerHTML=`<img src="${url}" style="display:block" onerror="this.style.display='none'" alt=""><span class="preview-hint">Image preview</span>`;}
+  else{const o=oils.find(x=>x.id===id);wrap.innerHTML=`<span>${o?o.emoji:''}</span><span class="preview-hint">Image preview</span>`;}
+}
+async function saveOil(id){
+  const o=oils.find(x=>x.id===id);
+  o.name=document.getElementById(`ao-n-${id}`).value;
+  o.priceNum=parseFloat(document.getElementById(`ao-p-${id}`).value)||0;
+  o.price='&#8377;'+o.priceNum.toLocaleString('en-IN');
+  o.region=document.getElementById(`ao-r-${id}`).value;
+  o.desc=document.getElementById(`ao-d-${id}`).value;
+  o.coords=document.getElementById(`ao-c-${id}`).value;
+  o.img=document.getElementById(`ao-i-${id}`).value;
+  o.emoji=document.getElementById(`ao-em-${id}`).value||o.emoji;
+  o.map=document.getElementById(`ao-m-${id}`).value;
+  o.video=document.getElementById(`ao-v-${id}`).value;
+  renderExpList();if(activeOil===id)pickOil(id);buildOilCards();
+  if(window.saveOilToFirebase){
+    try{await window.saveOilToFirebase(o);toast('&#9989; '+o.name+' saved to cloud!');}
+    catch(e){toast('&#9989; '+o.name+' updated (offline)');}
+  }else{toast('&#9989; '+o.name+' updated!');}
+}
+
+// ════════════ ADMIN: ORIGIN MAP SHAPES ════════════
+function buildOriginsGrid(){
+  document.getElementById('ad-origins-grid').innerHTML=oils.map(o=>`
+    <div class="ad-card">
+      <div class="ad-card-top">
+        <div class="ad-icon"><span>${o.emoji}</span></div>
+        <div>
+          <div class="ad-card-name">${o.name}</div>
+          <div class="ad-card-sub">Current: ${shapeNames[o.shape]||o.shape}</div>
+        </div>
+      </div>
+      <div class="af">
+        <label>Select Map Shape</label>
+        <div class="map-shape-grid" id="shape-grid-${o.id}">
+          ${Object.entries(shapes).map(([k,v])=>`
+            <div class="map-shape-opt${o.shape===k?' sel':''}" onclick="selectShape(${o.id},'${k}',this)">
+              ${v}
+              <div>${shapeNames[k]||k}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <button class="ad-save" onclick="saveOilShape(${o.id})">&#128190; Save Map Shape</button>
+    </div>`).join('');
+}
+function selectShape(oilId,shapeKey,el){
+  document.querySelectorAll(`#shape-grid-${oilId} .map-shape-opt`).forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+  const o=oils.find(x=>x.id===oilId);
+  if(o)o.shape=shapeKey;
+}
+async function saveOilShape(id){
+  const o=oils.find(x=>x.id===id);
+  if(!o)return;
+  if(activeOil===id)pickOil(id);
+  buildOriginsGrid();
+  if(window.saveOilToFirebase){
+    try{await window.saveOilToFirebase(o);toast('&#9989; Map shape saved for '+o.name);}
+    catch(e){toast('&#9989; Map shape updated (offline)');}
+  }else{toast('&#9989; Map updated for '+o.name);}
+}
+
+// ════════════ ADMIN: PRICE STORY SECTION ════════════
+const defaultCompare={
+  cheap:["Solvent-extracted with hexane chemicals","Heated to 200°C+ destroying all nutrients","Bleached and deodorised to mask quality","Preservatives and additives added","Yields 99% from low-quality seeds","No traceability to origin farm"],
+  pure:["Mechanical press only — zero chemicals","Never exceeds 40°C — full nutrition intact","Natural colour & aroma — nothing to hide","Zero additives, zero preservatives","30-40% lower yield = higher cost, higher purity","GI-tagged single origin — fully traceable"]
+};
+let compareData={...defaultCompare};
+function buildPriceComparisons(){
+  const inp=document.getElementById('pw-compare-inputs');
+  if(!inp)return;
+  inp.innerHTML=compareData.cheap.map((c,i)=>`
+    <div class="af-row" style="margin-bottom:8px">
+      <div class="af" style="margin:0"><label style="color:#e07070">&#10060; Cheap Oil ${i+1}</label>
+        <input id="pwc-cheap-${i}" value="${c}"></div>
+      <div class="af" style="margin:0"><label style="color:#6aaa6a">&#9989; Sunsa ${i+1}</label>
+        <input id="pwc-pure-${i}" value="${compareData.pure[i]||''}"></div>
+    </div>`).join('')+`
+    <button class="ad-save" onclick="savePriceCompare()" style="margin-top:10px">&#128190; Update Comparison Table</button>`;
+}
+function savePriceCompare(){
+  compareData.cheap=compareData.cheap.map((_,i)=>document.getElementById(`pwc-cheap-${i}`)?.value||'');
+  compareData.pure=compareData.pure.map((_,i)=>document.getElementById(`pwc-pure-${i}`)?.value||'');
+  // Re-render comparison on page
+  document.getElementById('pw-cheap-list').innerHTML=compareData.cheap.map(t=>`<div class="pw-item"><span class="pw-item-icon">&#128293;</span><span>${t}</span></div>`).join('');
+  document.getElementById('pw-pure-list').innerHTML=compareData.pure.map(t=>`<div class="pw-item"><span class="pw-item-icon">&#10024;</span><span>${t}</span></div>`).join('');
+  toast('&#9989; Comparison table updated!');
+}
+function savePriceStory(){
+  const t=document.getElementById('pw-title-input').value;
+  const s=document.getElementById('pw-sub-input').value;
+  const d=document.getElementById('pw-desc-input').value;
+  document.getElementById('pw-main-title').innerHTML=t+' <span id="pw-main-sub">'+s+'</span>';
+  document.getElementById('pw-main-desc').textContent=d;
+  toast('&#9989; Price story updated!');
+}
+
+// ════════════ INIT ════════════
+renderProducts();
+renderExpList();
+updateCart();
+pickOil(oils[0].id);
+(()=>{const el=document.getElementById('ft-year');if(el)el.innerHTML='&#169; '+new Date().getFullYear()+' Sunsa Organics. All rights reserved.';})();
+if(window.seedFirebaseIfEmpty)window.seedFirebaseIfEmpty(products,oils);
+</script>
+</body>
+</html>
