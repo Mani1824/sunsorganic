@@ -1203,33 +1203,51 @@ function refreshAdminStats(){
 }
 
 // ════════════ ADMIN: BRANDING ════════════
-function saveBranding(){
+function applyBranding(b){
+  if(!b)return;
+  if(b.name)document.getElementById('logo-name').childNodes[0].textContent=b.name;
+  if(b.tagline)document.getElementById('logo-tag').textContent=b.tagline;
+  if(b.logo){document.getElementById('logo-img').src=b.logo;document.getElementById('logo-img').style.display='block';}
+  else{document.getElementById('logo-img').style.display='none';}
+  if(b.green)document.documentElement.style.setProperty('--sage',b.green);
+  if(b.heroTitle)document.getElementById('hero-title').innerHTML=b.heroTitle;
+  if(b.heroSub)document.getElementById('hero-sub').textContent=b.heroSub;
+}
+async function loadBranding(){
+  try{
+    const doc=await firebase.firestore().collection('settings').doc('branding').get();
+    if(doc.exists)applyBranding(doc.data());
+  }catch(e){console.log('Branding offline');}
+}
+async function saveBranding(){
   const nm=document.getElementById('ab-name').value;
   const tg=document.getElementById('ab-tag').value;
   const lg=document.getElementById('ab-logo').value;
-  document.getElementById('logo-name').childNodes[0].textContent=nm;
-  document.getElementById('logo-tag').textContent=tg;
-  if(lg){
-    document.getElementById('logo-img').src=lg;document.getElementById('logo-img').style.display='block';
-    document.getElementById('logo-preview-img').src=lg;document.getElementById('logo-preview-img').style.display='block';
-    document.getElementById('logo-preview-emoji').style.display='none';
-  }else{
-    document.getElementById('logo-img').style.display='none';
-    document.getElementById('logo-preview-img').style.display='none';
-    document.getElementById('logo-preview-emoji').style.display='';
-  }
-  // Apply colour overrides
   const green=document.getElementById('ab-green').value;
-  if(green)document.documentElement.style.setProperty('--sage',green);
-  toast('&#9989; Branding saved!');
+  const navbg=document.getElementById('ab-navbg').value;
+  const branding={name:nm,tagline:tg,logo:lg,green,navbg};
+  applyBranding(branding);
+  if(lg){document.getElementById('logo-preview-img').src=lg;document.getElementById('logo-preview-img').style.display='block';document.getElementById('logo-preview-emoji').style.display='none';}
+  else{document.getElementById('logo-preview-img').style.display='none';document.getElementById('logo-preview-emoji').style.display='';}
+  try{
+    await firebase.firestore().collection('settings').doc('branding').set(branding);
+    toast('&#9989; Branding saved — will stay after refresh!');
+  }catch(e){toast('&#9989; Branding applied (offline)');}
 }
-function saveHero(){
+async function saveHero(){
   const raw=document.getElementById('ab-hero-h').value;
+  const sub=document.getElementById('ab-hero-s').value;
   const parts=raw.split(',');
   const html=parts.length>1?parts[0]+',<br><em>'+parts.slice(1).join(',').trim()+'</em>':raw;
   document.getElementById('hero-title').innerHTML=html;
-  document.getElementById('hero-sub').textContent=document.getElementById('ab-hero-s').value;
-  toast('&#9989; Hero updated!');
+  document.getElementById('hero-sub').textContent=sub;
+  try{
+    const ref=firebase.firestore().collection('settings').doc('branding');
+    const doc=await ref.get();
+    const existing=doc.exists?doc.data():{};
+    await ref.set({...existing,heroTitle:html,heroSub:sub});
+    toast('&#9989; Hero saved — will stay after refresh!');
+  }catch(e){toast('&#9989; Hero updated (offline)');}
 }
 // Live logo URL preview
 document.addEventListener('DOMContentLoaded',()=>{
@@ -1443,6 +1461,7 @@ updateCart();
 pickOil(oils[0].id);
 (()=>{const el=document.getElementById('ft-year');if(el)el.innerHTML='&#169; '+new Date().getFullYear()+' Sunsa Organics. All rights reserved.';})();
 if(window.seedFirebaseIfEmpty)window.seedFirebaseIfEmpty(products,oils);
+loadBranding();
 </script>
 </body>
 </html>
