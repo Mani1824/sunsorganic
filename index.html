@@ -514,6 +514,14 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
   border-radius:50%;background:#fff;transition:.3s;}
 .toggle-sw input:checked+.toggle-track::after{transform:translateX(18px);}
 
+
+/* Map panel — image only */
+.map-no-img{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;padding:20px;text-align:center;}
+.map-no-img span{font-size:3.5rem;opacity:.35;}
+.map-no-img div{color:var(--sage2);font-weight:700;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;}
+.map-hint{font-size:.66rem!important;color:rgba(26,92,42,.4)!important;font-weight:400!important;
+  letter-spacing:.04em!important;text-transform:none!important;margin-top:2px;}
 </style>
 </head>
 <body>
@@ -1024,21 +1032,6 @@ let oils=[
 ];
 
 // ════════════ MAP SHAPES — Indian state silhouettes ════════════
-const shapes={
-  andhra:`<svg viewBox="0 0 200 260"><path d="M60,20 L140,18 L165,55 L168,100 L155,145 L135,180 L108,210 L85,225 L62,215 L42,188 L28,152 L22,108 L28,65Z" fill="#1F5C2E"/><text x="100" y="130" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="Inter,sans-serif">ANDHRA</text><text x="100" y="148" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="Inter,sans-serif">PRADESH</text></svg>`,
-  kerala:`<svg viewBox="0 0 100 280"><path d="M55,15 L70,35 L74,70 L70,110 L65,150 L60,190 L52,230 L44,255 L36,260 L30,245 L34,205 L38,165 L42,125 L46,85 L48,45Z" fill="#1F5C2E"/><text x="52" y="138" text-anchor="middle" fill="white" font-size="11" font-weight="800" font-family="Inter,sans-serif">KERALA</text></svg>`,
-  karnataka:`<svg viewBox="0 0 220 240"><path d="M35,55 L100,18 L155,20 L188,50 L195,95 L185,140 L165,175 L140,200 L108,215 L78,210 L50,190 L28,160 L18,118 L22,78Z" fill="#1F5C2E"/><text x="108" y="118" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="Inter,sans-serif">KARNATAKA</text></svg>`,
-  rajasthan:`<svg viewBox="0 0 260 240"><path d="M25,80 L75,25 L145,15 L205,30 L238,68 L242,115 L228,158 L195,188 L155,205 L108,208 L68,198 L35,172 L15,135Z" fill="#1F5C2E"/><text x="130" y="112" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="Inter,sans-serif">RAJASTHAN</text></svg>`,
-  maharashtra:`<svg viewBox="0 0 260 220"><path d="M22,88 L72,28 L138,15 L195,25 L232,62 L238,108 L222,148 L188,178 L148,195 L105,198 L65,188 L32,162 L12,125Z" fill="#1F5C2E"/><text x="128" y="108" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="Inter,sans-serif">MAHARASHTRA</text></svg>`,
-  india_s:`<svg viewBox="0 0 180 240"><path d="M48,18 L128,13 L153,48 L158,88 L148,128 L128,158 L98,198 L78,218 L58,208 L38,178 L23,138 L18,98 L23,58Z" fill="#1F5C2E"/><text x="88" y="110" text-anchor="middle" fill="white" font-size="12" font-weight="800" font-family="Inter,sans-serif">INDIA</text></svg>`,
-  india_n:`<svg viewBox="0 0 220 160"><path d="M18,78 L58,18 L118,8 L173,28 L193,63 L183,98 L153,128 L108,143 L68,138 L33,118Z" fill="#1F5C2E"/><text x="106" y="80" text-anchor="middle" fill="white" font-size="12" font-weight="800" font-family="Inter,sans-serif">INDIA</text></svg>`,
-};
-
-const shapeNames={
-  andhra:"Andhra Pradesh",kerala:"Kerala",karnataka:"Karnataka",
-  rajasthan:"Rajasthan",maharashtra:"Maharashtra",
-  india_s:"India (South)",india_n:"India (North)"
-};
 
 // ════════════ BRAND LOGO SVG ════════════
 const logoSVG=`<svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="15" r="5" fill="#D4A020"/><line x1="20" y1="4" x2="20" y2="7" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="20" y1="23" x2="20" y2="26" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="9" y1="15" x2="12" y2="15" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="28" y1="15" x2="31" y2="15" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="12.5" y1="7.5" x2="14.6" y2="9.6" stroke="#D4A020" stroke-width="1.5" stroke-linecap="round"/><line x1="27.5" y1="7.5" x2="25.4" y2="9.6" stroke="#D4A020" stroke-width="1.5" stroke-linecap="round"/><path d="M13 26 Q15.5 20 20 18 Q24.5 20 27 26 Q23 33 20 34 Q17 33 13 26Z" fill="#5a9040"/></svg>`;
@@ -1101,20 +1094,22 @@ function pickOil(id){
     <button class="exp-btn map" onclick="openMM(${o.id})">&#128205; View Origin</button>
     ${o.video?`<button class="exp-btn vid" onclick="openVM(${o.id})">&#9654; Video Proof</button>`:''}
     <button class="exp-btn buy" onclick="addCartByOilId(${o.id})">&#128722; Buy Now</button>`;
-  // Render map: use uploaded image if available, else SVG silhouette
+  // Render map — image only
   const mapImgUrl = o.mapImg || '';
   if(mapImgUrl){
     document.getElementById('map-display').innerHTML=`
       <div class="map-img-wrap">
         <img src="${mapImgUrl}" alt="${o.region} map"
-          onerror="this.parentElement.innerHTML='<div class=map-img-placeholder>${shapes[o.shape]||shapes.india_s}<\/div>'">
+          onerror="this.parentElement.innerHTML='<div class=map-no-img><span>&#128506;</span><div>No map image set</div><div class=map-hint>Upload a map image in Admin &#8594; Origin Maps</div></div>'">
       </div>
       <div class="map-region-label">${o.region}</div>`;
   } else {
-    const svg=shapes[o.shape]||shapes['india_s'];
     document.getElementById('map-display').innerHTML=`
-      <div class="map-img-placeholder"><div class="map-svg-wrap">${svg}</div></div>
-      <div class="map-region-label">${o.region}</div>`;
+      <div class="map-no-img">
+        <span>&#128506;</span>
+        <div>${o.region}</div>
+        <div class="map-hint">Upload a map image in Admin &#8594; Origin Maps</div>
+      </div>`;
   }
 }
 
@@ -1413,7 +1408,7 @@ async function saveOil(id){
 // ════════════ ADMIN: ORIGIN MAP SHAPES ════════════
 function buildOriginsGrid(){
   document.getElementById('ad-origins-grid').innerHTML=oils.map(o=>`
-    <div class="ad-card" style="border:1px solid #1a2e16">
+    <div class="ad-card">
       <div class="ad-card-top">
         <div class="ad-icon"><span>${o.emoji}</span></div>
         <div>
@@ -1422,53 +1417,43 @@ function buildOriginsGrid(){
         </div>
       </div>
 
-      <!-- OPTION 1: Upload a real map image -->
+      <!-- MAP IMAGE UPLOAD -->
       <div style="background:#0a1208;border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid #1e3a18">
-        <div style="font-size:.68rem;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">
-          &#128247; Option 1 — Upload Real Map Image (Recommended)
-        </div>
-        <div style="width:100%;height:140px;border-radius:8px;overflow:hidden;background:#080e05;
-          border:1.5px solid #1a2e16;display:flex;align-items:center;justify-content:center;
-          margin-bottom:8px;position:relative" id="mapimg-prev-${o.id}">
+        <div style="font-size:.68rem;color:var(--gold);font-weight:700;letter-spacing:.1em;
+          text-transform:uppercase;margin-bottom:10px">&#128247; Map Image</div>
+
+        <!-- Preview -->
+        <div style="width:100%;height:160px;border-radius:10px;overflow:hidden;background:#080e05;
+          border:1.5px solid #1a2e16;margin-bottom:10px;display:flex;align-items:center;
+          justify-content:center;position:relative" id="mapimg-prev-${o.id}">
           ${o.mapImg
-            ? `<img src="${o.mapImg}" style="width:100%;height:100%;object-fit:cover" alt=""
-                onerror="this.parentElement.innerHTML='<span style=font-size:2rem>&#128506;</span>'">`
-            : `<span style="font-size:2rem;opacity:.4">&#128506;</span>
-               <span style="position:absolute;bottom:6px;font-size:.62rem;color:#3a4e36;letter-spacing:.06em;text-transform:uppercase">No image set</span>`
+            ?`<img src="${o.mapImg}" style="width:100%;height:100%;object-fit:cover" alt=""
+                onerror="this.parentElement.innerHTML='<span style=font-size:2rem>&#10060;</span><span style=font-size:.65rem;color:#e07070;display:block;margin-top:4px>Image failed to load</span>'">`
+            :`<div style="text-align:center">
+                <div style="font-size:2.5rem;opacity:.3">&#128506;</div>
+                <div style="font-size:.66rem;color:#3a4e36;margin-top:6px;letter-spacing:.06em;text-transform:uppercase">No image set</div>
+              </div>`
           }
         </div>
+
+        <!-- URL input -->
         <input id="ao-mi-${o.id}" value="${o.mapImg||''}"
           placeholder="https://mani1824.github.io/sunsorganic/maps/andhra.jpg"
           oninput="livePreviewMapImg(${o.id},this.value)"
-          style="width:100%;padding:9px 12px;border:1.5px solid #1a2e16;border-radius:8px;
-          font-size:.8rem;background:#080e05;color:#bbb;outline:none;font-family:Fira Mono,monospace">
-        <div style="font-size:.68rem;color:#3a4e36;margin-top:5px;line-height:1.5">
-          &#128161; Upload your map image to GitHub first, then paste the URL above.<br>
-          e.g. <span style="color:#6a8a66">https://mani1824.github.io/sunsorganic/andhra-map.jpg</span>
+          style="width:100%;padding:10px 12px;border:1.5px solid #1a2e16;border-radius:8px;
+          font-size:.8rem;background:#080e05;color:#bbb;outline:none;
+          font-family:'Fira Mono',monospace;transition:border-color .2s"
+          onfocus="this.style.borderColor='var(--sage)'"
+          onblur="this.style.borderColor='#1a2e16'">
+
+        <div style="font-size:.68rem;color:#3a4e36;margin-top:6px;line-height:1.6">
+          &#128161; Upload your map image to GitHub first, then paste the direct URL here.<br>
+          <span style="color:#6a8a66">e.g. https://mani1824.github.io/sunsorganic/andhra-map.jpg</span>
         </div>
       </div>
 
-      <!-- OPTION 2: Choose SVG shape fallback -->
-      <div style="background:#0a1208;border-radius:10px;padding:14px;border:1px solid #1e3a18">
-        <div style="font-size:.68rem;color:#6a7a66;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">
-          &#128313; Option 2 — SVG Shape (Fallback if no image)
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px" id="shape-grid-${o.id}">
-          ${Object.entries(shapes).map(([k,v])=>`
-            <div onclick="selectShape(${o.id},'${k}',this)"
-              style="background:${o.shape===k?'rgba(26,92,42,.3)':'#080e05'};
-              border:1.5px solid ${o.shape===k?'var(--sage)':'#1a2e16'};
-              border-radius:8px;padding:6px 4px;text-align:center;cursor:pointer;
-              transition:all .18s;font-size:.66rem;color:${o.shape===k?'#fff':'#4a5e46'}"
-              class="map-shape-opt${o.shape===k?' sel':''}">
-              ${v}
-              <div style="margin-top:2px">${shapeNames[k]||k}</div>
-            </div>`).join('')}
-        </div>
-      </div>
-
-      <button class="ad-save" onclick="saveOilMapFull(${o.id})" style="margin-top:12px">
-        &#128190; Save Map Settings
+      <button class="ad-save" onclick="saveOilMapFull(${o.id})">
+        &#128190; Save Map Image
       </button>
     </div>`).join('');
 }
@@ -1499,22 +1484,8 @@ async function saveOilMapFull(id){
     }catch(e){toast('&#9989; Map updated locally');}
   }
 }
-function selectShape(oilId,shapeKey,el){
-  document.querySelectorAll(`#shape-grid-${oilId} .map-shape-opt`).forEach(e=>e.classList.remove('sel'));
-  el.classList.add('sel');
-  const o=oils.find(x=>x.id===oilId);
-  if(o)o.shape=shapeKey;
-}
-async function saveOilShape(id){
-  const o=oils.find(x=>x.id===id);
-  if(!o)return;
-  if(activeOil===id)pickOil(id);
-  buildOriginsGrid();
-  if(window.saveOilToFirebase){
-    try{await window.saveOilToFirebase(o);toast('&#9989; Map shape saved for '+o.name);}
-    catch(e){toast('&#9989; Map shape updated (offline)');}
-  }else{toast('&#9989; Map updated for '+o.name);}
-}
+
+
 
 // ════════════ ADMIN: PRICE STORY SECTION ════════════
 const defaultCompare={
