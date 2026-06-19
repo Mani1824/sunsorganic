@@ -529,6 +529,16 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
 .prod-no-img span{font-size:2.5rem;opacity:.2;}
 .prod-no-img div{font-size:.62rem;color:rgba(26,16,8,.3);letter-spacing:.06em;text-transform:uppercase;}
 .prod-img.no-img{background:var(--lbg);}
+
+/* Currency switcher */
+.currency-bar{background:var(--sage);padding:8px 5vw;display:flex;align-items:center;justify-content:flex-end;gap:10px;}
+.currency-label{font-size:.72rem;color:rgba(255,255,255,.6);font-weight:600;letter-spacing:.06em;text-transform:uppercase;}
+.currency-btns{display:flex;gap:4px;}
+.cur-btn{padding:4px 12px;border-radius:20px;border:1.5px solid rgba(255,255,255,.25);
+  background:transparent;color:rgba(255,255,255,.7);font-size:.74rem;font-weight:700;
+  cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;}
+.cur-btn.active{background:#fff;color:var(--sage);border-color:#fff;}
+.cur-btn:hover:not(.active){background:rgba(255,255,255,.15);}
 </style>
 </head>
 <body>
@@ -813,6 +823,19 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
   <div class="ticker-track"><div class="ticker-item"><span class="ticker-dot"></span>&#127807; No Chemicals</div><div class="ticker-item"><span class="ticker-dot"></span>&#10052;&#65039; Cold Pressed Only</div><div class="ticker-item"><span class="ticker-dot"></span>&#127757; Single Origin</div><div class="ticker-item"><span class="ticker-dot"></span>&#127822; Lab Tested</div><div class="ticker-item"><span class="ticker-dot"></span>&#127807; No Chemicals</div><div class="ticker-item"><span class="ticker-dot"></span>&#10052;&#65039; Cold Pressed Only</div><div class="ticker-item"><span class="ticker-dot"></span>&#127757; Single Origin</div><div class="ticker-item"><span class="ticker-dot"></span>&#127822; Lab Tested</div><div class="ticker-item"><span class="ticker-dot"></span>&#127807; No Chemicals</div><div class="ticker-item"><span class="ticker-dot"></span>&#10052;&#65039; Cold Pressed Only</div><div class="ticker-item"><span class="ticker-dot"></span>&#127757; Single Origin</div><div class="ticker-item"><span class="ticker-dot"></span>&#127822; Lab Tested</div></div>
 </div>
 
+
+<!-- CURRENCY SWITCHER -->
+<div class="currency-bar">
+  <span class="currency-label">Currency:</span>
+  <div class="currency-btns">
+    <button class="cur-btn active" onclick="setCurrency('INR')" id="cur-INR">&#8377; INR</button>
+    <button class="cur-btn" onclick="setCurrency('USD')" id="cur-USD">$ USD</button>
+    <button class="cur-btn" onclick="setCurrency('EUR')" id="cur-EUR">&euro; EUR</button>
+    <button class="cur-btn" onclick="setCurrency('GBP')" id="cur-GBP">&pound; GBP</button>
+    <button class="cur-btn" onclick="setCurrency('AUD')" id="cur-AUD">A$ AUD</button>
+  </div>
+</div>
+
 <!-- PRODUCTS -->
 <section id="products">
   <div class="prod-header fade-up">
@@ -1067,7 +1090,7 @@ function renderProducts(){
         <div style="font-size:.68rem;color:var(--sage2);font-weight:600;margin-bottom:4px">&#128205; ${p.origin}</div>
       </div>
       <div class="prod-footer">
-        <div class="prod-price">${p.price}</div>
+        <div class="prod-price">${formatPrice(p.priceNum, activeCurrency)}</div>
         <button class="add-btn" onclick="addCart(${p.id})" ${p.qty===0?'disabled':''}>
           ${p.qty===0?'Out of Stock':'Add to Cart'}
         </button>
@@ -1080,8 +1103,12 @@ let activeOil=null;
 function renderExpList(){
   document.getElementById('exp-list').innerHTML=oils.map(o=>`
     <div class="exp-item${activeOil===o.id?' active':''}" onclick="pickOil(${o.id})">
-      <div class="exp-letter">
-        ${o.img?`<img src="${o.img}" onerror="this.outerHTML='<span style=\\'font-size:1.1rem\\'>${o.emoji}</span>'">`:`<span style="font-size:1.1rem">${o.emoji}</span>`}
+      <div class="exp-letter" style="overflow:hidden;background:${o.img?'transparent':'var(--earth)'}">
+        ${o.img
+          ?`<img src="${o.img}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"
+              onerror="this.parentElement.style.background='var(--earth)';this.style.display='none'">`
+          :`<span style="font-size:.75rem;color:rgba(255,255,255,.6);font-weight:700">${o.name.charAt(0)}</span>`
+        }
       </div>
       <div>
         <div class="exp-item-name">${o.name}</div>
@@ -1100,7 +1127,7 @@ function pickOil(id){
   document.getElementById('ei-desc').textContent=o.desc;
   const pr=document.getElementById('ei-price');
   const prRow=document.getElementById('ei-price-row');
-  pr.textContent=o.price; prRow.style.display='flex';
+  pr.innerHTML=formatPrice(o.priceNum, activeCurrency); prRow.style.display='flex';
   document.getElementById('ei-btns').innerHTML=`
     <button class="exp-btn map" onclick="openMM(${o.id})">&#128205; View Origin</button>
     ${o.video?`<button class="exp-btn vid" onclick="openVM(${o.id})">&#9654; Video Proof</button>`:''}
@@ -1169,11 +1196,11 @@ function updateCart(){
   body.innerHTML=cartItems.map(i=>`
     <div class="ci">
       <div class="ci-icon">${i.emoji}</div>
-      <div style="flex:1"><div class="ci-name">${i.name}${i.qty>1?' &#215;'+i.qty:''}</div><div class="ci-price">${i.price} / 1 Ltr</div></div>
+      <div style="flex:1"><div class="ci-name">${i.name}${i.qty>1?' &#215;'+i.qty:''}</div><div class="ci-price">${formatPrice(i.priceNum||0, activeCurrency)} / 1 Ltr</div></div>
       <button class="ci-rm" onclick="removeCart(${i.id})">&#10005;</button>
     </div>`).join('');
   const tot=cartItems.reduce((s,i)=>s+(i.priceNum||0)*i.qty,0);
-  document.getElementById('cart-total').textContent='&#8377;'+tot.toLocaleString('en-IN');
+  document.getElementById('cart-total').innerHTML=formatPrice(tot, activeCurrency);
 }
 function toggleCart(){document.getElementById('cart').classList.toggle('open');}
 
@@ -1498,8 +1525,34 @@ function buildOriginsGrid(){
         </div>
       </div>
 
+      <!-- PLACE NAME + MAP LINK -->
+      <div style="background:#0a1208;border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid #1e3a18">
+        <div style="font-size:.68rem;color:#6a7a66;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">
+          &#128205; Place Name &amp; Map Link
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="display:block;font-size:.67rem;color:#4a5e46;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Region / Place Name (shown below map image)</label>
+          <input id="ao-region-${o.id}" value="${o.region||''}"
+            placeholder="e.g. Andhra Pradesh, India"
+            style="width:100%;padding:9px 12px;border:1.5px solid #1a2e16;border-radius:8px;
+            font-size:.82rem;background:#080e05;color:#bbb;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s"
+            onfocus="this.style.borderColor='var(--sage)'" onblur="this.style.borderColor='#1a2e16'">
+        </div>
+        <div>
+          <label style="display:block;font-size:.67rem;color:#4a5e46;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Google Maps Link (popup when user clicks View Origin)</label>
+          <input id="ao-gmap-${o.id}" value="${o.map||''}"
+            placeholder="https://maps.google.com/?q=Andhra+Pradesh+India"
+            style="width:100%;padding:9px 12px;border:1.5px solid #1a2e16;border-radius:8px;
+            font-size:.76rem;background:#080e05;color:#bbb;outline:none;font-family:'Fira Mono',monospace;transition:border-color .2s"
+            onfocus="this.style.borderColor='var(--sage)'" onblur="this.style.borderColor='#1a2e16'">
+          <div style="font-size:.65rem;color:#3a4e36;margin-top:5px;line-height:1.5">
+            &#128161; Go to Google Maps, search the region, copy the URL from your browser address bar
+          </div>
+        </div>
+      </div>
+
       <button class="ad-save" onclick="saveOilMapFull(${o.id})">
-        &#128190; Save Map Image
+        &#128190; Save Map Image, Name &amp; Link
       </button>
     </div>`).join('');
 }
@@ -1520,14 +1573,18 @@ async function saveOilMapFull(id){
   const o=oils.find(x=>x.id===id);
   if(!o)return;
   o.mapImg=document.getElementById(`ao-mi-${id}`)?.value||'';
-  // shape already updated by selectShape click
+  const regionVal=document.getElementById(`ao-region-${id}`)?.value;
+  if(regionVal)o.region=regionVal;
+  const mapVal=document.getElementById(`ao-gmap-${id}`)?.value||document.getElementById(`ao-m-${id}`)?.value;
+  if(mapVal!==undefined)o.map=mapVal;
   if(activeOil===id)pickOil(id);
+  renderExpList();
   buildOriginsGrid();
   if(window.saveOilToFirebase){
     try{
       await window.saveOilToFirebase(o);
-      toast('&#9989; Map saved for '+o.name+' — updating for all users!');
-    }catch(e){toast('&#9989; Map updated locally');}
+      toast('&#9989; Map saved for '+o.name+' — live for all users!');
+    }catch(e){toast('&#9989; Map updated (offline)');}
   }
 }
 
@@ -1618,7 +1675,7 @@ function renderOffers(){
   if(!grid)return;
   const active=offers.filter(o=>o.active);
   if(!active.length){
-    grid.innerHTML='<div class="offers-empty"><span>&#127807;</span>No active offers right now. Check back soon!</div>';
+    grid.innerHTML='<div class="offers-empty"><div style="font-size:2.5rem;opacity:.2;margin-bottom:10px">&#127807;</div><div>No active offers right now. Check back soon!</div></div>';
     return;
   }
   grid.innerHTML=active.map(o=>{
@@ -1626,8 +1683,14 @@ function renderOffers(){
     return `<div class="offer-card fade-up">
       ${o.ribbon?`<div class="offer-ribbon">${o.ribbon}</div>`:''}
       <div class="offer-img">
-        ${o.img?`<img src="${o.img}" alt="${o.name}" onerror="this.parentElement.innerHTML='<div class=offer-img-placeholder>${o.emoji}</div>'">`
-          :`<div class="offer-img-placeholder">${o.emoji}</div>`}
+        ${o.img
+          ?`<img src="${o.img}" alt="${o.name}"
+              style="width:100%;height:100%;object-fit:cover"
+              onerror="this.parentElement.innerHTML='<div class=offer-img-placeholder style=background:#1a2e18;display:flex;align-items:center;justify-content:center;height:100%;font-size:.8rem;color:rgba(255,255,255,.3)>No image</div>'">`
+          :`<div class="offer-img-placeholder" style="background:linear-gradient(135deg,rgba(26,92,42,.3),rgba(0,0,0,.4));display:flex;align-items:center;justify-content:center;height:100%">
+              <div style="text-align:center;color:rgba(255,255,255,.25);font-size:.8rem">No image set</div>
+            </div>`
+        }
         ${o.tag?`<div class="offer-tag">${o.tag}</div>`:''}
       </div>
       <div class="offer-body">
@@ -1636,15 +1699,14 @@ function renderOffers(){
         <div class="offer-desc">${o.desc}</div>
         <div class="offer-items">${o.items.map(i=>`<span class="offer-item-tag">${i}</span>`).join('')}</div>
         <div class="offer-price-row">
-          <div class="offer-price">${o.price}</div>
-          ${o.originalPrice?`<div class="offer-original">${o.originalPrice}</div>`:''}
+          <div class="offer-price">${formatPrice(o.priceNum, activeCurrency)}</div>
+          ${o.originalPriceNum?`<div class="offer-original">${formatPrice(o.originalPriceNum, activeCurrency)}</div>`:''}
           ${saved>0?`<div class="offer-save">Save ${saved}%</div>`:''}
         </div>
-        <button class="offer-buy-btn" onclick="addOfferToCart(${o.id})">&#128722; Add Combo to Cart</button>
+        <button class="offer-buy-btn" onclick="addOfferToCart(${o.id})">Add Combo to Cart</button>
       </div>
     </div>`;
   }).join('');
-  // Re-observe new fade-up elements
   document.querySelectorAll('.fade-up:not(.visible)').forEach(el=>observer&&observer.observe(el));
 }
 
@@ -1841,8 +1903,15 @@ function toggleOfferActive(id,val){
 function previewOfferImg(id,url){
   const w=document.getElementById('offer-img-prev-'+id);
   if(!w)return;
-  if(url){w.innerHTML=`<img src="${url}" style="display:block" onerror="this.style.display='none'" alt=""><span class="preview-hint">Offer image</span>`;}
-  else{const o=offers.find(x=>x.id===id);w.innerHTML=`<span style="font-size:2rem">${o?o.emoji:''}</span><span class="preview-hint">Offer image</span>`;}
+  if(url){
+    w.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover" alt=""
+      onerror="this.parentElement.innerHTML='<span style=font-size:1.5rem;opacity:.5>&#10060;</span><span style=font-size:.65rem;color:#e07070;display:block;margin-top:4px>Image not found</span>'">`;
+  } else {
+    w.innerHTML=`<div style="text-align:center">
+      <div style="font-size:2rem;opacity:.25">&#128247;</div>
+      <div style="font-size:.66rem;color:#3a4e36;margin-top:4px">No image</div>
+    </div>`;
+  }
 }
 
 function previewMapImg(id,url){
@@ -1957,6 +2026,50 @@ function loadOffersFromFirebase(){
 }
 
 
+
+// ════════════ CURRENCY ════════════
+// Exchange rates vs INR
+const FX = {INR:1, USD:0.012, EUR:0.011, GBP:0.0094, AUD:0.018};
+const SYM = {INR:'&#8377;', USD:'$', EUR:'&euro;', GBP:'&pound;', AUD:'A$'};
+let activeCurrency = localStorage.getItem('sunsa_currency')||'INR';
+
+function formatPrice(inr, currency){
+  const rate = FX[currency]||1;
+  const sym  = SYM[currency]||'&#8377;';
+  const val  = inr * rate;
+  if(currency==='INR') return sym + Math.round(val).toLocaleString('en-IN');
+  return sym + val.toFixed(2);
+}
+
+function setCurrency(cur){
+  activeCurrency = cur;
+  try{localStorage.setItem('sunsa_currency', cur);}catch(e){}
+  // Update active button
+  document.querySelectorAll('.cur-btn').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('cur-'+cur);
+  if(btn) btn.classList.add('active');
+  // Re-render all price displays
+  renderProducts();
+  renderOffers();
+  updatePriceDisplay();
+}
+
+function updatePriceDisplay(){
+  // Update explorer price if open
+  if(activeOil){
+    const o = oils.find(x=>x.id===activeOil);
+    if(o){
+      const el = document.getElementById('ei-price');
+      if(el) el.textContent = formatPrice(o.priceNum, activeCurrency);
+    }
+  }
+}
+
+function initCurrency(){
+  const saved = localStorage.getItem('sunsa_currency')||'INR';
+  setCurrency(saved);
+}
+
 // ════════════ INIT ════════════
 renderProducts();
 renderExpList();
@@ -1969,6 +2082,7 @@ loadOffersLocally();
 loadOffersFromFirebase();
 renderOffers();
 loadOffersHeader();
+initCurrency();
 </script>
 
 <script>
