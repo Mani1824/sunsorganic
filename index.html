@@ -183,8 +183,8 @@ section{padding:100px 5vw;}
 .prod-img{height:180px;display:flex;align-items:center;justify-content:center;font-size:5rem;background:var(--lbg);position:relative;overflow:hidden;}
 .prod-img::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 60%,rgba(212,160,32,.08),transparent 70%);}
 .prod-img img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;}
-.prod-img .emoji-fb{position:relative;z-index:1;filter:drop-shadow(0 6px 12px rgba(0,0,0,.15));transition:transform .4s ease;}
-.prod-card:hover .emoji-fb{transform:scale(1.15) translateY(-4px);}
+
+
 .prod-badge{position:absolute;top:10px;left:10px;background:linear-gradient(135deg,var(--sage),var(--sage2));color:#fff;font-size:.58rem;padding:4px 11px;border-radius:20px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;z-index:2;box-shadow:0 3px 10px rgba(26,92,42,.3);}
 .prod-qty-tag{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.9);color:var(--sage);font-size:.6rem;padding:3px 9px;border-radius:20px;z-index:2;font-weight:700;}
 .prod-body{padding:16px 18px 0;background:var(--lbg);}
@@ -522,6 +522,13 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
 .map-no-img div{color:var(--sage2);font-weight:700;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;}
 .map-hint{font-size:.66rem!important;color:rgba(26,92,42,.4)!important;font-weight:400!important;
   letter-spacing:.04em!important;text-transform:none!important;margin-top:2px;}
+
+/* Product card — image only mode */
+.prod-no-img{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;width:100%;height:100%;position:relative;z-index:1;}
+.prod-no-img span{font-size:2.5rem;opacity:.2;}
+.prod-no-img div{font-size:.62rem;color:rgba(26,16,8,.3);letter-spacing:.06em;text-transform:uppercase;}
+.prod-img.no-img{background:var(--lbg);}
 </style>
 </head>
 <body>
@@ -1044,8 +1051,12 @@ function renderProducts(){
         <div class="ptb-logo">${logoSVG}<div><div class="ptb-brand">SUNSA</div><div class="ptb-sub">ORGANICS</div></div></div>
       </div>
       <div class="prod-img">
-        ${p.img?`<img src="${p.img}" alt="${p.name}" onerror="this.style.display='none'">`:''}
-        <span class="emoji-fb">${p.emoji}</span>
+        ${p.img
+          ?`<img src="${p.img}" alt="${p.name}"
+              style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0"
+              onerror="this.parentElement.classList.add('no-img')">`
+          :`<div class="prod-no-img"><span>&#128247;</span><div>Add image in Admin</div></div>`
+        }
         <div class="prod-badge">${p.qty===0?'Out of Stock':p.badge}</div>
         ${p.qty>0?`<div class="prod-qty-tag">Qty: ${p.qty}</div>`:''}
       </div>
@@ -1285,41 +1296,77 @@ function buildProdCards(){
     <div class="ad-card">
       <div class="ad-card-top">
         <div class="ad-icon" id="adpi-${p.id}">
-          ${p.img?`<img src="${p.img}" alt="">`:`<span>${p.emoji}</span>`}
+          ${p.img?`<img src="${p.img}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:10px">`:'<span style="font-size:1.4rem">&#128247;</span>'}
         </div>
         <div>
           <div class="ad-card-name">${p.name}</div>
           <div class="ad-card-sub">${p.price} &middot; Qty: ${p.qty}</div>
         </div>
       </div>
-      <div class="af">
-        <label>Product Image URL</label>
-        <div class="ad-img-preview" id="prod-img-prev-${p.id}">
-          ${p.img?`<img src="${p.img}" style="display:block" alt="">`:`<span>${p.emoji}</span>`}
-          <span class="preview-hint">Image preview</span>
+
+      <!-- IMAGE UPLOAD -->
+      <div style="background:#0a1208;border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid #1e3a18">
+        <div style="font-size:.68rem;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">
+          &#128247; Product Image
         </div>
-        <input id="ap-i-${p.id}" value="${p.img||''}" placeholder="https://...jpg or png" oninput="previewProdImg(${p.id},this.value)">
+        <div style="width:100%;height:160px;border-radius:10px;overflow:hidden;background:#080e05;
+          border:1.5px solid #1a2e16;margin-bottom:10px;display:flex;align-items:center;
+          justify-content:center;position:relative" id="prod-img-prev-${p.id}">
+          ${p.img
+            ?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover" alt=""
+                onerror="this.parentElement.innerHTML='<span style=font-size:1.5rem;opacity:.5>&#10060;</span><span style=font-size:.65rem;color:#e07070;display:block;margin-top:4px>Image not found</span>'">`
+            :`<div style="text-align:center">
+                <div style="font-size:2.5rem;opacity:.25">&#128247;</div>
+                <div style="font-size:.66rem;color:#3a4e36;margin-top:6px;letter-spacing:.06em;text-transform:uppercase">No image set</div>
+              </div>`
+          }
+        </div>
+        <input id="ap-i-${p.id}" value="${p.img||''}"
+          placeholder="https://mani1824.github.io/sunsorganic/groundnut.jpg"
+          oninput="livePreviewProdImg(${p.id},this.value)"
+          style="width:100%;padding:10px 12px;border:1.5px solid #1a2e16;border-radius:8px;
+          font-size:.8rem;background:#080e05;color:#bbb;outline:none;font-family:'Fira Mono',monospace;transition:border-color .2s"
+          onfocus="this.style.borderColor='var(--sage)'"
+          onblur="this.style.borderColor='#1a2e16'">
+        <div style="font-size:.68rem;color:#3a4e36;margin-top:6px;line-height:1.6">
+          &#128161; Upload product image to GitHub first, then paste URL.<br>
+          <span style="color:#6a8a66">e.g. https://mani1824.github.io/sunsorganic/groundnut-oil.jpg</span>
+        </div>
       </div>
+
       <div class="af-row">
-        <div class="af"><label>Name</label><input id="ap-n-${p.id}" value="${p.name}"></div>
+        <div class="af"><label>Product Name</label><input id="ap-n-${p.id}" value="${p.name}"></div>
         <div class="af"><label>Price (&#8377;)</label><input type="number" id="ap-p-${p.id}" value="${p.priceNum||0}"></div>
       </div>
       <div class="af-row">
         <div class="af"><label>Quantity</label><input type="number" id="ap-q-${p.id}" value="${p.qty}" min="0"></div>
-        <div class="af"><label>Badge Text</label><input id="ap-b-${p.id}" value="${p.badge}"></div>
+        <div class="af"><label>Badge</label><input id="ap-b-${p.id}" value="${p.badge}"></div>
       </div>
       <div class="af"><label>Origin Location</label><input id="ap-o-${p.id}" value="${p.origin}"></div>
       <div class="af"><label>Description</label><textarea id="ap-d-${p.id}">${p.desc}</textarea></div>
-      <div class="af"><label>Emoji (fallback when no image)</label><input id="ap-e-${p.id}" value="${p.emoji}" maxlength="3"></div>
       <button class="ad-save" onclick="saveProd(${p.id})">&#128190; Save Product</button>
     </div>`).join('');
 }
-function previewProdImg(id,url){
-  const wrap=document.getElementById('prod-img-prev-'+id);
-  if(!wrap)return;
-  if(url){wrap.innerHTML=`<img src="${url}" style="display:block" onerror="this.style.display='none'" alt=""><span class="preview-hint">Image preview</span>`;}
-  else{const p=products.find(x=>x.id===id);wrap.innerHTML=`<span>${p?p.emoji:''}</span><span class="preview-hint">Image preview</span>`;}
+
+function livePreviewProdImg(id, url){
+  const wrap = document.getElementById('prod-img-prev-'+id);
+  const icon = document.getElementById('adpi-'+id);
+  if(!wrap) return;
+  if(url){
+    wrap.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover" alt=""
+      onerror="this.parentElement.innerHTML='<span style=font-size:1.5rem;opacity:.5>&#10060;</span><span style=font-size:.65rem;color:#e07070;display:block;margin-top:4px>Image not found</span>'">`;
+    if(icon) icon.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"
+      onerror="this.parentElement.innerHTML='<span style=font-size:1.4rem>&#128247;</span>'">`;
+  } else {
+    wrap.innerHTML=`<div style="text-align:center">
+      <div style="font-size:2.5rem;opacity:.25">&#128247;</div>
+      <div style="font-size:.66rem;color:#3a4e36;margin-top:6px;letter-spacing:.06em;text-transform:uppercase">No image set</div>
+    </div>`;
+    if(icon) icon.innerHTML='<span style="font-size:1.4rem">&#128247;</span>';
+  }
 }
+
+
 async function saveProd(id){
   const p=products.find(x=>x.id===id);
   p.name=document.getElementById(`ap-n-${id}`).value;
@@ -1329,8 +1376,7 @@ async function saveProd(id){
   p.badge=document.getElementById(`ap-b-${id}`).value;
   p.origin=document.getElementById(`ap-o-${id}`).value;
   p.desc=document.getElementById(`ap-d-${id}`).value;
-  p.img=document.getElementById(`ap-i-${id}`).value;
-  p.emoji=document.getElementById(`ap-e-${id}`).value||p.emoji;
+  p.img=document.getElementById(`ap-i-${id}`)?.value||'';
   renderProducts();refreshAdminStats();buildProdCards();
   if(window.saveProductToFirebase){
     try{await window.saveProductToFirebase(p);toast('&#9989; '+p.name+' saved to cloud!');}
