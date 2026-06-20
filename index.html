@@ -93,23 +93,32 @@
   // ── SAVE FUNCTIONS — called by admin after every edit ──
   window.saveProductToFirebase = async function(p){
     try{
-      await db.collection('products').doc(String(p.id)).set(p);
+      const clean = {};
+      for(const k in p){ if(p[k]!==undefined) clean[k] = (p[k]===null?'':p[k]); }
+      await db.collection('products').doc(String(p.id)).set(clean);
+      console.log('Product saved to Firestore:', p.id);
       return true;
-    }catch(e){ console.error('Save product error:',e); return false; }
+    }catch(e){ console.error('SAVE PRODUCT FAILED:',e.message,e); return false; }
   };
 
   window.saveOilToFirebase = async function(o){
     try{
-      await db.collection('oils').doc(String(o.id)).set(o);
+      const clean = {};
+      for(const k in o){ if(o[k]!==undefined) clean[k] = (o[k]===null?'':o[k]); }
+      await db.collection('oils').doc(String(o.id)).set(clean);
+      console.log('Oil saved to Firestore:', o.id);
       return true;
-    }catch(e){ console.error('Save oil error:',e); return false; }
+    }catch(e){ console.error('SAVE OIL FAILED:',e.message,e); return false; }
   };
 
   window.saveOfferToFirebase = async function(o){
     try{
-      await db.collection('offers').doc(String(o.id)).set(o);
+      const clean = {};
+      for(const k in o){ if(o[k]!==undefined) clean[k] = (o[k]===null?'':o[k]); }
+      await db.collection('offers').doc(String(o.id)).set(clean);
+      console.log('Offer saved to Firestore:', o.id);
       return true;
-    }catch(e){ console.error('Save offer error:',e); return false; }
+    }catch(e){ console.error('SAVE OFFER FAILED:',e.message,e); return false; }
   };
 
   window.deleteOfferFromFirebase = async function(id){
@@ -806,6 +815,13 @@ body.dark-mode .ft-cert{color:rgba(232,220,200,.35);border-color:rgba(232,220,20
           <div class="ad-stat"><div class="ad-stat-n" id="st-stock">0</div><div class="ad-stat-l">In Stock</div></div>
           <div class="ad-stat"><div class="ad-stat-n" id="st-cart">0</div><div class="ad-stat-l">Cart Items</div></div>
         </div>
+        <div id="firebase-status" style="background:#0a1208;border:1px solid #1a2e16;border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:.82rem">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="fb-status-dot" style="width:10px;height:10px;border-radius:50%;background:#888;display:inline-block"></span>
+            <span id="fb-status-text" style="color:#8a9a86;font-weight:600">Checking cloud connection&#8230;</span>
+          </div>
+          <div id="fb-status-detail" style="color:#3a4e36;font-size:.72rem;margin-top:6px;line-height:1.5"></div>
+        </div>
         <div class="ad-info-box">
           <strong>Admin Guide</strong><br>
           &#127912; <strong>Branding</strong> &#8212; Logo image, brand name, tagline, colours<br>
@@ -1235,11 +1251,49 @@ let oils=[
 // ════════════ BRAND LOGO SVG ════════════
 const logoSVG=`<svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="15" r="5" fill="#D4A020"/><line x1="20" y1="4" x2="20" y2="7" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="20" y1="23" x2="20" y2="26" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="9" y1="15" x2="12" y2="15" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="28" y1="15" x2="31" y2="15" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="12.5" y1="7.5" x2="14.6" y2="9.6" stroke="#D4A020" stroke-width="1.5" stroke-linecap="round"/><line x1="27.5" y1="7.5" x2="25.4" y2="9.6" stroke="#D4A020" stroke-width="1.5" stroke-linecap="round"/><path d="M13 26 Q15.5 20 20 18 Q24.5 20 27 26 Q23 33 20 34 Q17 33 13 26Z" fill="#5a9040"/></svg>`;
 
+// Detect if admin is currently typing in an input (so we don't wipe their work)
+function isEditingField(){
+  const el = document.activeElement;
+  return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+}
+// Remove undefined/null values — Firestore rejects undefined
+function sanitizeForFirestore(obj){
+  const clean = {};
+  for(const k in obj){
+    if(obj[k] !== undefined && obj[k] !== null){
+      clean[k] = obj[k];
+    } else if(obj[k] === null){
+      clean[k] = '';
+    }
+  }
+  return clean;
+}
+
 // ════════════ DATA SYNC (Firebase → local) ════════════
 // These let the Firebase onSnapshot listeners (top script) update our local data
-window.__setProducts = function(arr){ products = arr; renderProducts(); if(document.getElementById('admin-dash')?.classList.contains('open')) buildProdCards(); };
-window.__setOils = function(arr){ oils = arr; renderExpList(); if(activeOil) pickOil(activeOil); if(document.getElementById('admin-dash')?.classList.contains('open')){buildOilCards();buildOriginsGrid();} };
-window.__setOffers = function(arr){ if(Array.isArray(arr)&&arr.length>0){offers = arr;} renderOffers(); if(document.getElementById('admin-dash')?.classList.contains('open')) buildOffersAdmin(); };
+window.__setProducts = function(arr){
+  products = arr;
+  renderProducts();
+  // Only rebuild admin cards if admin is open AND not currently typing in a field
+  if(document.getElementById('admin-dash')?.classList.contains('open') && !isEditingField()){
+    buildProdCards();
+  }
+};
+window.__setOils = function(arr){
+  oils = arr;
+  renderExpList();
+  if(activeOil) pickOil(activeOil);
+  if(document.getElementById('admin-dash')?.classList.contains('open') && !isEditingField()){
+    buildOilCards(); buildOriginsGrid();
+  }
+};
+window.__setOffers = function(arr){
+  if(Array.isArray(arr)&&arr.length>0){offers = arr;}
+  renderOffers();
+  if(document.getElementById('admin-dash')?.classList.contains('open') && !isEditingField()){
+    buildOffersAdmin();
+  }
+};
 
 // ════════════ RENDER PRODUCTS ════════════
 function renderProducts(){
@@ -1406,6 +1460,7 @@ function openAdmin(){
   document.getElementById('admin-dash').classList.add('open');
   refreshAdminStats();buildProdCards();buildOilCards();buildOriginsGrid();buildPriceComparisons();buildOffersAdmin();
   document.getElementById('ab-name').value=document.getElementById('logo-name').childNodes[0].textContent.trim();
+  setTimeout(checkFirebaseStatus, 500);
 }
 function closeAdmin(){document.getElementById('admin-dash').classList.remove('open');}
 function switchTab(name){
@@ -1579,10 +1634,10 @@ async function saveProd(id){
   p.origin=document.getElementById(`ap-o-${id}`).value;
   p.desc=document.getElementById(`ap-d-${id}`).value;
   p.img=document.getElementById(`ap-i-${id}`)?.value||'';
-  renderProducts();refreshAdminStats();buildProdCards();
+  renderProducts();refreshAdminStats();
   if(window.saveProductToFirebase){
     const ok=await window.saveProductToFirebase(p);
-    toast(ok?'&#9989; '+p.name+' saved — live for ALL users!':'&#9888;&#65039; Not saved to cloud — check Firestore rules!');
+    toast(ok?'&#9989; "'+p.name+'" saved — LIVE for all users!':'&#9888;&#65039; Not saved! Check Firestore rules in Firebase console.');
   }else{toast('&#9989; '+p.name+' updated!');}
 }
 
@@ -1646,10 +1701,10 @@ async function saveOil(id){
   o.mapImg=document.getElementById(`ao-mi-${id}`)?.value||'';
   o.map=document.getElementById(`ao-m-${id}`).value;
   o.video=document.getElementById(`ao-v-${id}`).value;
-  renderExpList();if(activeOil===id)pickOil(id);buildOilCards();
+  renderExpList();if(activeOil===id)pickOil(id);
   if(window.saveOilToFirebase){
     const ok=await window.saveOilToFirebase(o);
-    toast(ok?'&#9989; '+o.name+' saved — live for ALL users!':'&#9888;&#65039; Not saved to cloud — check Firestore rules!');
+    toast(ok?'&#9989; "'+o.name+'" saved — LIVE for all users!':'&#9888;&#65039; Not saved! Check Firestore rules.');
   }else{toast('&#9989; '+o.name+' updated!');}
 }
 
@@ -1993,10 +2048,10 @@ function buildOffersAdmin(){
         <div style="font-size:.66rem;color:#6a7a66;text-transform:uppercase;letter-spacing:.1em;
           font-weight:700;margin-bottom:10px">&#128176; Pricing</div>
         <div class="af-row">
-          <div class="af"><label>Offer Price (&#8377;)</label>
+          <div class="af"><label>Offer Price (in INR &#8377;)</label>
             <input type="number" id="oa-price-${o.id}" value="${o.priceNum}"
               placeholder="950" oninput="updateSaveBadge(${o.id})"></div>
-          <div class="af"><label>Original / MRP (&#8377;)</label>
+          <div class="af"><label>Original/MRP (in INR &#8377;)</label>
             <input type="number" id="oa-orig-${o.id}" value="${o.originalPriceNum||''}"
               placeholder="1060 (for discount %)" oninput="updateSaveBadge(${o.id})"></div>
         </div>
@@ -2062,21 +2117,27 @@ function previewBanner(url){
   }
 }
 
-function addNewOffer(){
+async function addNewOffer(){
   const newId=Math.max(...offers.map(o=>o.id),0)+1;
-  offers.push({id:newId,active:false,name:'New Offer',ribbon:'New',
+  const newOffer={id:newId,active:false,name:'New Offer',ribbon:'New',
     desc:'Describe this offer here.',items:['Oil 1','Oil 2'],
     emoji:'&#127809;',img:'',price:'&#8377;0',priceNum:0,
-    originalPrice:'',originalPriceNum:0,tag:'Combo',timer:''});
+    originalPrice:'',originalPriceNum:0,tag:'Combo',timer:''};
+  offers.push(newOffer);
   buildOffersAdmin();renderOffers();saveOffersLocally();
-  toast('&#43; New offer added — scroll down to edit it');
+  await window.saveOfferToFirebase(newOffer);
+  toast('&#43; New offer added — scroll down to edit, then toggle Active');
 }
 
-function toggleOfferActive(id,val){
+async function toggleOfferActive(id,val){
   const o=offers.find(x=>x.id===id);
-  if(o){o.active=val;renderOffers();saveOffersLocally();
-    saveOfferToFirebase(o);
-    toast(val?'&#9989; Offer now active on site':'&#10060; Offer hidden from site');}
+  if(o){
+    o.active=val;
+    renderOffers();
+    saveOffersLocally();
+    const ok = await window.saveOfferToFirebase(o);
+    toast(ok ? (val?'&#9989; Offer now LIVE for all users':'&#10060; Offer hidden from all users') : '&#9888;&#65039; Check Firestore rules!');
+  }
 }
 
 function previewOfferImg(id,url){
@@ -2115,9 +2176,12 @@ async function saveOffer(id){
   o.timer=document.getElementById(`oa-timer-${id}`).value;
   o.emoji=document.getElementById(`oa-emoji-${id}`).value||o.emoji;
   o.img=document.getElementById(`oa-img-${id}`).value;
-  renderOffers();buildOffersAdmin();saveOffersLocally();
+  // Update the public site + local cache (do NOT rebuild admin form — keeps your edits visible)
+  renderOffers();
+  saveOffersLocally();
+  // Save to Firestore for all users
   const ok = await window.saveOfferToFirebase(o);
-  toast(ok ? '&#9989; Offer saved — live for all users!' : '&#9989; Offer saved locally');
+  toast(ok ? '&#9989; "'+o.name+'" saved — LIVE for all users!' : '&#9888;&#65039; Not saved! Check Firestore rules in Firebase console.');
 }
 
 async function deleteOffer(id){
@@ -2128,10 +2192,7 @@ async function deleteOffer(id){
   toast('&#128465; Offer deleted for all users');
 }
 
-async function saveOfferToFirebase(o){
-  try{await firebase.firestore().collection('offers').doc(String(o.id)).set(o);}
-  catch(e){}
-}
+// saveOfferToFirebase is defined globally in top script (window.saveOfferToFirebase)
 
 function saveOffersHeader(){
   const banner=document.getElementById('off-banner')?.value||'';
@@ -2260,6 +2321,38 @@ function initDarkMode(){
   } else {
     document.body.classList.remove('dark-mode');
     if(btn) btn.textContent = '\u263D';
+  }
+}
+
+
+// ════════════ FIREBASE CONNECTION DIAGNOSTIC ════════════
+async function checkFirebaseStatus(){
+  const dot = document.getElementById('fb-status-dot');
+  const text = document.getElementById('fb-status-text');
+  const detail = document.getElementById('fb-status-detail');
+  if(!dot) return;
+  // Test 1: Are we logged in?
+  if(!window._adminUser){
+    dot.style.background='#e0a040';
+    text.textContent='Not logged in';
+    text.style.color='#e0a040';
+    detail.textContent='You need to be logged in for saves to work.';
+    return;
+  }
+  // Test 2: Try a write to Firestore
+  try{
+    await firebase.firestore().collection('settings').doc('_healthcheck').set({
+      ts: Date.now(), by: window._adminUser.email
+    });
+    dot.style.background='#3aaa52';
+    text.textContent='\u2705 Cloud connected — saves work for all users!';
+    text.style.color='#6aaa6a';
+    detail.innerHTML='Logged in as <span style="color:#8a9a86">'+window._adminUser.email+'</span>. Every change you save updates instantly worldwide.';
+  }catch(e){
+    dot.style.background='#e07070';
+    text.textContent='\u26a0\ufe0f Cloud WRITE BLOCKED — saves will not persist!';
+    text.style.color='#e07070';
+    detail.innerHTML='Firestore is blocking writes. <strong style="color:#e0a040">FIX:</strong> Go to Firebase Console &#8594; Firestore &#8594; Rules, and set:<br><span style="color:#6a8a66;font-family:Fira Mono,monospace;font-size:.68rem">allow read: if true; allow write: if request.auth != null;</span><br>Error: '+(e.message||e.code||'permission-denied');
   }
 }
 
