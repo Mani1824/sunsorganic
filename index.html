@@ -27,32 +27,28 @@
   // Products: fires instantly whenever admin saves — all users get update
   db.collection('products').onSnapshot(snap=>{
     if(!snap.empty){
-      window.products = snap.docs.map(d=>({...d.data(), id: Number(d.data().id||d.id)}));
-      if(typeof renderProducts==='function') renderProducts();
+      const arr = snap.docs.map(d=>({...d.data(), id: Number(d.data().id||d.id)})).sort((a,b)=>a.id-b.id);
+      if(typeof window.__setProducts==='function') window.__setProducts(arr);
       if(typeof refreshAdminStats==='function') refreshAdminStats();
-      // Cache to localStorage for instant load next visit
-      try{localStorage.setItem('sunsa_products', JSON.stringify(window.products));}catch(e){}
+      try{localStorage.setItem('sunsa_products', JSON.stringify(arr));}catch(e){}
     }
   });
 
   // Oils: fires instantly whenever admin saves origin/map/image
   db.collection('oils').onSnapshot(snap=>{
     if(!snap.empty){
-      window.oils = snap.docs.map(d=>({...d.data(), id: Number(d.data().id||d.id)}));
-      if(typeof renderExpList==='function') renderExpList();
-      if(typeof buildOilCards==='function' && document.getElementById('admin-dash')?.classList.contains('open')) buildOilCards();
-      if(typeof buildOriginsGrid==='function' && document.getElementById('admin-dash')?.classList.contains('open')) buildOriginsGrid();
-      if(typeof activeOil!=='undefined' && activeOil) pickOil(activeOil);
-      try{localStorage.setItem('sunsa_oils', JSON.stringify(window.oils));}catch(e){}
+      const arr = snap.docs.map(d=>({...d.data(), id: Number(d.data().id||d.id)})).sort((a,b)=>a.id-b.id);
+      if(typeof window.__setOils==='function') window.__setOils(arr);
+      try{localStorage.setItem('sunsa_oils', JSON.stringify(arr));}catch(e){}
     }
   });
 
   // Offers: fires whenever admin adds/edits/removes an offer
   db.collection('offers').onSnapshot(snap=>{
     if(!snap.empty){
-      window.offers = snap.docs.map(d=>({...d.data(), id: Number(d.data().id||d.id)}));
-      if(typeof renderOffers==='function') renderOffers();
-      try{localStorage.setItem('sunsa_offers', JSON.stringify(window.offers));}catch(e){}
+      const arr = snap.docs.map(d=>({...d.data(), id: Number(d.data().id||d.id)})).sort((a,b)=>a.id-b.id);
+      if(typeof window.__setOffers==='function') window.__setOffers(arr);
+      try{localStorage.setItem('sunsa_offers', JSON.stringify(arr));}catch(e){}
     }
   });
 
@@ -124,21 +120,30 @@
   };
 
   // ── SEED: only runs if collections are completely empty ──
-  window.seedFirebaseIfEmpty = async function(prods, oilsArr){
+  window.seedFirebaseIfEmpty = async function(prods, oilsArr, offersArr){
     try{
       const pSnap = await db.collection('products').get();
       if(pSnap.empty){
         const batch = db.batch();
         prods.forEach(p=> batch.set(db.collection('products').doc(String(p.id)), p));
         await batch.commit();
-        console.log('Products seeded to Firestore');
+        console.log('Products seeded');
       }
       const oSnap = await db.collection('oils').get();
       if(oSnap.empty){
         const batch = db.batch();
         oilsArr.forEach(o=> batch.set(db.collection('oils').doc(String(o.id)), o));
         await batch.commit();
-        console.log('Oils seeded to Firestore');
+        console.log('Oils seeded');
+      }
+      if(offersArr && offersArr.length){
+        const ofSnap = await db.collection('offers').get();
+        if(ofSnap.empty){
+          const batch = db.batch();
+          offersArr.forEach(o=> batch.set(db.collection('offers').doc(String(o.id)), o));
+          await batch.commit();
+          console.log('Offers seeded');
+        }
       }
     }catch(e){ console.error('Seed error:',e); }
   };
@@ -1230,6 +1235,12 @@ let oils=[
 // ════════════ BRAND LOGO SVG ════════════
 const logoSVG=`<svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="15" r="5" fill="#D4A020"/><line x1="20" y1="4" x2="20" y2="7" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="20" y1="23" x2="20" y2="26" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="9" y1="15" x2="12" y2="15" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="28" y1="15" x2="31" y2="15" stroke="#D4A020" stroke-width="1.8" stroke-linecap="round"/><line x1="12.5" y1="7.5" x2="14.6" y2="9.6" stroke="#D4A020" stroke-width="1.5" stroke-linecap="round"/><line x1="27.5" y1="7.5" x2="25.4" y2="9.6" stroke="#D4A020" stroke-width="1.5" stroke-linecap="round"/><path d="M13 26 Q15.5 20 20 18 Q24.5 20 27 26 Q23 33 20 34 Q17 33 13 26Z" fill="#5a9040"/></svg>`;
 
+// ════════════ DATA SYNC (Firebase → local) ════════════
+// These let the Firebase onSnapshot listeners (top script) update our local data
+window.__setProducts = function(arr){ products = arr; renderProducts(); if(document.getElementById('admin-dash')?.classList.contains('open')) buildProdCards(); };
+window.__setOils = function(arr){ oils = arr; renderExpList(); if(activeOil) pickOil(activeOil); if(document.getElementById('admin-dash')?.classList.contains('open')){buildOilCards();buildOriginsGrid();} };
+window.__setOffers = function(arr){ if(Array.isArray(arr)&&arr.length>0){offers = arr;} renderOffers(); if(document.getElementById('admin-dash')?.classList.contains('open')) buildOffersAdmin(); };
+
 // ════════════ RENDER PRODUCTS ════════════
 function renderProducts(){
   document.getElementById('prod-grid').innerHTML=products.map(p=>`
@@ -1827,7 +1838,13 @@ function saveOffersLocally(){
 function loadOffersLocally(){
   try{
     const s=localStorage.getItem('sunsa_offers');
-    if(s){offers=JSON.parse(s);}
+    if(s){
+      const parsed=JSON.parse(s);
+      // Only use cached offers if non-empty, else keep defaults
+      if(Array.isArray(parsed) && parsed.length>0){
+        offers=parsed;
+      }
+    }
   }catch(e){}
 }
 
@@ -2252,7 +2269,7 @@ renderExpList();
 updateCart();
 pickOil(oils[0].id);
 (()=>{const el=document.getElementById('ft-year');if(el)el.innerHTML='&#169; '+new Date().getFullYear()+' Sunsa Organics. All rights reserved.';})();
-if(window.seedFirebaseIfEmpty)window.seedFirebaseIfEmpty(products,oils);
+if(window.seedFirebaseIfEmpty)window.seedFirebaseIfEmpty(products,oils,offers);
 loadBranding();
 loadOffersLocally();
 renderOffers();
