@@ -23,32 +23,63 @@
   const db   = firebase.firestore();
   const auth = firebase.auth();
 
-  // Real-time listeners — update products & oils when Firestore changes
+  // ── REAL-TIME LISTENERS ──
+  // Products: fires instantly whenever admin saves — all users get update
   db.collection('products').onSnapshot(snap=>{
     if(!snap.empty){
-      window.products=snap.docs.map(d=>({...d.data(),id:d.data().id||Number(d.id)}));
-      if(typeof renderProducts==='function')renderProducts();
-      if(typeof refreshAdminStats==='function')refreshAdminStats();
+      window.products = snap.docs.map(d=>({...d.data(), id: Number(d.data().id||d.id)}));
+      if(typeof renderProducts==='function') renderProducts();
+      if(typeof refreshAdminStats==='function') refreshAdminStats();
+      // Cache to localStorage for instant load next visit
+      try{localStorage.setItem('sunsa_products', JSON.stringify(window.products));}catch(e){}
     }
   });
+
+  // Oils: fires instantly whenever admin saves origin/map/image
   db.collection('oils').onSnapshot(snap=>{
     if(!snap.empty){
-      window.oils=snap.docs.map(d=>({...d.data(),id:d.data().id||Number(d.id)}));
-      if(typeof renderExpList==='function')renderExpList();
-      if(typeof buildOilCards==='function'&&document.getElementById('admin-dash')?.classList.contains('open'))buildOilCards();
+      window.oils = snap.docs.map(d=>({...d.data(), id: Number(d.data().id||d.id)}));
+      if(typeof renderExpList==='function') renderExpList();
+      if(typeof buildOilCards==='function' && document.getElementById('admin-dash')?.classList.contains('open')) buildOilCards();
+      if(typeof buildOriginsGrid==='function' && document.getElementById('admin-dash')?.classList.contains('open')) buildOriginsGrid();
+      if(typeof activeOil!=='undefined' && activeOil) pickOil(activeOil);
+      try{localStorage.setItem('sunsa_oils', JSON.stringify(window.oils));}catch(e){}
     }
+  });
+
+  // Offers: fires whenever admin adds/edits/removes an offer
+  db.collection('offers').onSnapshot(snap=>{
+    if(!snap.empty){
+      window.offers = snap.docs.map(d=>({...d.data(), id: Number(d.data().id||d.id)}));
+      if(typeof renderOffers==='function') renderOffers();
+      try{localStorage.setItem('sunsa_offers', JSON.stringify(window.offers));}catch(e){}
+    }
+  });
+
+  // Settings (branding, offers header): fires when admin changes logo/colors/banner
+  db.collection('settings').onSnapshot(snap=>{
+    snap.forEach(doc=>{
+      if(doc.id==='branding'){
+        if(typeof applyBranding==='function') applyBranding(doc.data());
+        try{localStorage.setItem('sunsa_branding', JSON.stringify(doc.data()));}catch(e){}
+      }
+      if(doc.id==='offersHeader'){
+        if(typeof applyOffersHeader==='function') applyOffersHeader(doc.data());
+        try{localStorage.setItem('sunsa_offers_header', JSON.stringify(doc.data()));}catch(e){}
+      }
+    });
   });
 
   auth.onAuthStateChanged(user=>{window._adminUser=user||null;});
 
-  // ── Auth functions — fully global, callable from onclick ──
+  // ── AUTH ──
   window.doFirebaseLogin = async function(){
-    const email  = document.getElementById('al-email').value.trim();
-    const pass   = document.getElementById('al-input').value;
-    const errEl  = document.getElementById('al-err');
+    const email = document.getElementById('al-email').value.trim();
+    const pass  = document.getElementById('al-input').value;
+    const errEl = document.getElementById('al-err');
     errEl.style.display='none';
     try{
-      await auth.signInWithEmailAndPassword(email,pass);
+      await auth.signInWithEmailAndPassword(email, pass);
       closeLogin(); openAdmin();
     }catch(e){
       errEl.textContent='Incorrect email or password.';
@@ -60,22 +91,56 @@
   window.doFirebaseLogout = async function(){
     await auth.signOut();
     closeAdmin();
-    toast('&#128075; Logged out');
+    toast('Logged out');
   };
 
+  // ── SAVE FUNCTIONS — called by admin after every edit ──
   window.saveProductToFirebase = async function(p){
-    await db.collection('products').doc(String(p.id)).set(p);
+    try{
+      await db.collection('products').doc(String(p.id)).set(p);
+      return true;
+    }catch(e){ console.error('Save product error:',e); return false; }
   };
 
   window.saveOilToFirebase = async function(o){
-    await db.collection('oils').doc(String(o.id)).set(o);
+    try{
+      await db.collection('oils').doc(String(o.id)).set(o);
+      return true;
+    }catch(e){ console.error('Save oil error:',e); return false; }
   };
 
-  window.seedFirebaseIfEmpty = async function(prods,oilsArr){
-    const pSnap = await db.collection('products').get();
-    if(pSnap.empty){for(const p of prods) await db.collection('products').doc(String(p.id)).set(p);}
-    const oSnap = await db.collection('oils').get();
-    if(oSnap.empty){for(const o of oilsArr) await db.collection('oils').doc(String(o.id)).set(o);}
+  window.saveOfferToFirebase = async function(o){
+    try{
+      await db.collection('offers').doc(String(o.id)).set(o);
+      return true;
+    }catch(e){ console.error('Save offer error:',e); return false; }
+  };
+
+  window.deleteOfferFromFirebase = async function(id){
+    try{
+      await db.collection('offers').doc(String(id)).delete();
+      return true;
+    }catch(e){ return false; }
+  };
+
+  // ── SEED: only runs if collections are completely empty ──
+  window.seedFirebaseIfEmpty = async function(prods, oilsArr){
+    try{
+      const pSnap = await db.collection('products').get();
+      if(pSnap.empty){
+        const batch = db.batch();
+        prods.forEach(p=> batch.set(db.collection('products').doc(String(p.id)), p));
+        await batch.commit();
+        console.log('Products seeded to Firestore');
+      }
+      const oSnap = await db.collection('oils').get();
+      if(oSnap.empty){
+        const batch = db.batch();
+        oilsArr.forEach(o=> batch.set(db.collection('oils').doc(String(o.id)), o));
+        await batch.commit();
+        console.log('Oils seeded to Firestore');
+      }
+    }catch(e){ console.error('Seed error:',e); }
   };
 </script>
 
@@ -539,6 +604,67 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
   cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;}
 .cur-btn.active{background:#fff;color:var(--sage);border-color:#fff;}
 .cur-btn:hover:not(.active){background:rgba(255,255,255,.15);}
+
+/* ─── DARK MODE ─── */
+body.dark-mode {
+  --cream:#0f1a0d;
+  --cream2:#0a1208;
+  --white:#111e0e;
+  --lbg:#0d1a0b;
+  --mist:#1a2e18;
+  --earth:#e8dcc8;
+  --hl:#2a3a18;
+  --gold:#F0C040;
+  --amber:#D4902A;
+}
+body.dark-mode nav.scrolled{
+  background:rgba(10,18,8,.97);
+  border-bottom-color:rgba(45,138,64,.15);
+}
+body.dark-mode .prod-card{
+  box-shadow:0 4px 24px rgba(0,0,0,.4);
+}
+body.dark-mode .exp-info{
+  background:#111e0e;
+}
+body.dark-mode .exp-info h2{color:#e8dcc8;}
+body.dark-mode .exp-desc{color:#a09070;}
+body.dark-mode .exp-list{background:#0d1a0b;}
+body.dark-mode .exp-item:hover{background:rgba(45,138,64,.1);}
+body.dark-mode .exp-item-name{color:#e8dcc8;}
+body.dark-mode .mm-inner{background:#111e0e;}
+body.dark-mode .mm-head{color:#e8dcc8;}
+body.dark-mode .cart-body{background:#0d1a0b;}
+body.dark-mode .ci-name{color:#e8dcc8;}
+body.dark-mode #cart{background:#0d1a0b;}
+body.dark-mode .cart-foot{background:#0d1a0b;border-top-color:rgba(45,138,64,.2);}
+body.dark-mode .cart-total{color:#e8dcc8;}
+body.dark-mode .trust-ticker{background:#0a1a08;}
+body.dark-mode .currency-bar{background:#0a1a08;}
+body.dark-mode .offer-card{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08);}
+body.dark-mode .offer-name{color:#e8dcc8;}
+body.dark-mode .offer-desc{color:rgba(232,220,200,.5);}
+body.dark-mode footer{background:#060e05;}
+body.dark-mode .prod-body{background:#0d1a0b;}
+body.dark-mode .prod-name{color:#e8dcc8;}
+body.dark-mode .prod-desc{color:#7a6a4a;}
+body.dark-mode .prod-size{color:var(--sage2);}
+
+/* Dark mode toggle button */
+.dark-toggle{
+  width:40px;height:40px;border-radius:50%;border:none;
+  background:rgba(255,255,255,.12);backdrop-filter:blur(8px);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;transition:all .3s;flex-shrink:0;
+  border:1.5px solid rgba(255,255,255,.2);
+}
+nav.scrolled .dark-toggle{
+  background:rgba(26,92,42,.1);
+  border-color:rgba(26,92,42,.2);
+}
+.dark-toggle:hover{transform:scale(1.1);background:rgba(255,255,255,.22);}
+body.dark-mode .dark-toggle{background:rgba(240,192,64,.15);border-color:rgba(240,192,64,.3);}
+
 </style>
 </head>
 <body>
@@ -768,7 +894,8 @@ footer::before{content:'';position:absolute;top:-80px;left:-80px;width:300px;hei
     <a href="#explorer">Origins</a>
     <a href="#story">Our Story</a>
   </div>
-  <div class="nav-right">
+  <div class="nav-right" style="display:flex;align-items:center;gap:10px">
+    <button class="dark-toggle" id="dark-toggle-btn" onclick="toggleDarkMode()" title="Toggle dark mode">&#9728;&#65039;</button>
     <button class="cart-btn" onclick="toggleCart()">&#128722; Cart <span class="cart-count" id="cart-count">0</span></button>
   </div>
 </nav>
@@ -1406,8 +1533,8 @@ async function saveProd(id){
   p.img=document.getElementById(`ap-i-${id}`)?.value||'';
   renderProducts();refreshAdminStats();buildProdCards();
   if(window.saveProductToFirebase){
-    try{await window.saveProductToFirebase(p);toast('&#9989; '+p.name+' saved to cloud!');}
-    catch(e){toast('&#9989; '+p.name+' updated (offline)');}
+    const ok=await window.saveProductToFirebase(p);
+    toast(ok?'&#9989; '+p.name+' saved — live for ALL users!':'&#9888;&#65039; Not saved to cloud — check Firestore rules!');
   }else{toast('&#9989; '+p.name+' updated!');}
 }
 
@@ -1473,8 +1600,8 @@ async function saveOil(id){
   o.video=document.getElementById(`ao-v-${id}`).value;
   renderExpList();if(activeOil===id)pickOil(id);buildOilCards();
   if(window.saveOilToFirebase){
-    try{await window.saveOilToFirebase(o);toast('&#9989; '+o.name+' saved to cloud!');}
-    catch(e){toast('&#9989; '+o.name+' updated (offline)');}
+    const ok=await window.saveOilToFirebase(o);
+    toast(ok?'&#9989; '+o.name+' saved — live for ALL users!':'&#9888;&#65039; Not saved to cloud — check Firestore rules!');
   }else{toast('&#9989; '+o.name+' updated!');}
 }
 
@@ -1581,10 +1708,8 @@ async function saveOilMapFull(id){
   renderExpList();
   buildOriginsGrid();
   if(window.saveOilToFirebase){
-    try{
-      await window.saveOilToFirebase(o);
-      toast('&#9989; Map saved for '+o.name+' — live for all users!');
-    }catch(e){toast('&#9989; Map updated (offline)');}
+    const ok = await window.saveOilToFirebase(o);
+    toast(ok ? '&#9989; Map saved — live for all users!' : '&#9888;&#65039; Saved locally. Check Firestore rules.');
   }
 }
 
@@ -1937,15 +2062,16 @@ async function saveOffer(id){
   o.emoji=document.getElementById(`oa-emoji-${id}`).value||o.emoji;
   o.img=document.getElementById(`oa-img-${id}`).value;
   renderOffers();buildOffersAdmin();saveOffersLocally();
-  await saveOfferToFirebase(o);
-  toast('&#9989; Offer saved!');
+  const ok = await window.saveOfferToFirebase(o);
+  toast(ok ? '&#9989; Offer saved — live for all users!' : '&#9989; Offer saved locally');
 }
 
-function deleteOffer(id){
+async function deleteOffer(id){
   if(!confirm('Delete this offer?'))return;
   offers=offers.filter(x=>x.id!==id);
   renderOffers();buildOffersAdmin();saveOffersLocally();
-  toast('&#128465; Offer deleted');
+  try{await window.deleteOfferFromFirebase(id);}catch(e){}
+  toast('&#128465; Offer deleted for all users');
 }
 
 async function saveOfferToFirebase(o){
@@ -2012,18 +2138,7 @@ function applyOffersHeader(h){
   if(subEl&&h.sub)subEl.textContent=h.sub;
 }
 
-function loadOffersFromFirebase(){
-  try{
-    firebase.firestore().collection('offers').get().then(snap=>{
-      if(!snap.empty){
-        offers=snap.docs.map(d=>({...d.data(),id:d.data().id||Number(d.id)}));
-        renderOffers();
-        buildOffersAdmin();
-        saveOffersLocally();
-      }
-    });
-  }catch(e){}
-}
+// offers now loaded via onSnapshot real-time listener
 
 
 
@@ -2070,6 +2185,30 @@ function initCurrency(){
   setCurrency(saved);
 }
 
+
+// ════════════ DARK MODE ════════════
+function toggleDarkMode(){
+  const isDark = document.body.classList.toggle('dark-mode');
+  const btn = document.getElementById('dark-toggle-btn');
+  if(btn) btn.textContent = isDark ? '\u2600\uFE0F' : '\u263D';
+  try{ localStorage.setItem('sunsa_dark', isDark ? '1' : '0'); }catch(e){}
+}
+
+function initDarkMode(){
+  const saved = localStorage.getItem('sunsa_dark');
+  // Default: dark if user's OS is dark
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const shouldBeDark = saved !== null ? saved === '1' : prefersDark;
+  const btn = document.getElementById('dark-toggle-btn');
+  if(shouldBeDark){
+    document.body.classList.add('dark-mode');
+    if(btn) btn.textContent = '\u2600\uFE0F';
+  } else {
+    document.body.classList.remove('dark-mode');
+    if(btn) btn.textContent = '\u263D';
+  }
+}
+
 // ════════════ INIT ════════════
 renderProducts();
 renderExpList();
@@ -2079,10 +2218,10 @@ pickOil(oils[0].id);
 if(window.seedFirebaseIfEmpty)window.seedFirebaseIfEmpty(products,oils);
 loadBranding();
 loadOffersLocally();
-loadOffersFromFirebase();
 renderOffers();
 loadOffersHeader();
 initCurrency();
+initDarkMode();
 </script>
 
 <script>
