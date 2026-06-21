@@ -716,6 +716,59 @@ body.dark-mode .ft-col a{color:rgba(232,220,200,.3);}
 body.dark-mode .ft-bottom{color:rgba(232,220,200,.3);}
 body.dark-mode .ft-cert{color:rgba(232,220,200,.35);border-color:rgba(232,220,200,.08);}
 
+
+/* Product variety + size pills */
+.prod-variety{font-size:.72rem;color:var(--amber);font-weight:700;letter-spacing:.04em;margin-bottom:8px;text-transform:uppercase;}
+.prod-sizes{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.size-pill{padding:5px 14px;border-radius:20px;border:1.5px solid rgba(26,92,42,.25);background:transparent;color:var(--sage);font-size:.74rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;}
+.size-pill.active{background:var(--sage);color:#fff;border-color:var(--sage);box-shadow:0 3px 10px rgba(26,92,42,.25);}
+.size-pill:hover:not(.active){background:rgba(26,92,42,.08);}
+body.dark-mode .size-pill{border-color:rgba(45,138,64,.3);color:#8aca82;}
+body.dark-mode .size-pill.active{background:var(--sage);color:#fff;}
+.prod-price-size{font-size:.62rem;color:rgba(255,255,255,.7);font-weight:600;margin-top:1px;}
+.prod-details-btn{width:100%;padding:8px;background:rgba(212,160,32,.1);border:1px solid rgba(212,160,32,.3);border-radius:10px;color:var(--amber);font-size:.74rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;margin-bottom:4px;}
+.prod-details-btn:hover{background:rgba(212,160,32,.2);}
+/* Thumbnails */
+.prod-thumbs{display:flex;gap:6px;padding:8px 18px 0;background:var(--lbg);flex-wrap:wrap;}
+body.dark-mode .prod-thumbs{background:#0f1a0d;}
+.prod-thumb{width:42px;height:42px;border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all .2s;}
+.prod-thumb.active{border-color:var(--gold);}
+.prod-thumb img{width:100%;height:100%;object-fit:cover;}
+
+/* Product details modal */
+#pdmodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9500;align-items:center;justify-content:center;padding:20px;}
+#pdmodal.open{display:flex;}
+.pd-inner{background:var(--white);border-radius:24px;width:min(560px,94vw);max-height:90vh;overflow-y:auto;box-shadow:0 30px 90px rgba(0,0,0,.5);}
+body.dark-mode .pd-inner{background:#0f1a0d;}
+.pd-head{background:linear-gradient(135deg,var(--sage),var(--sage2));padding:28px 30px;position:relative;}
+.pd-head h2{font-family:'Fraunces',serif;color:#fff;font-size:1.8rem;font-weight:700;margin-bottom:4px;}
+.pd-head .pd-tagline{color:rgba(255,255,255,.8);font-size:.85rem;font-style:italic;}
+.pd-head .pd-variety{color:var(--goldb);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:6px;}
+.pd-x{position:absolute;top:20px;right:20px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.pd-body{padding:26px 30px;}
+.pd-section-title{font-family:'Fraunces',serif;font-size:1.1rem;color:var(--sage);font-weight:700;margin:20px 0 12px;display:flex;align-items:center;gap:8px;}
+body.dark-mode .pd-section-title{color:#8aca82;}
+.pd-section-title:first-child{margin-top:0;}
+.pd-benefit{display:flex;gap:12px;margin-bottom:14px;}
+.pd-benefit-icon{width:32px;height:32px;border-radius:8px;background:rgba(212,160,32,.15);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.pd-benefit-t{font-weight:700;font-size:.88rem;color:var(--earth);margin-bottom:2px;}
+body.dark-mode .pd-benefit-t{color:#e8dcc8;}
+.pd-benefit-d{font-size:.8rem;color:#7a6a4a;line-height:1.5;}
+body.dark-mode .pd-benefit-d{color:#9a9a82;}
+.pd-nutrition{background:var(--lbg);border-radius:14px;padding:18px;margin-top:8px;}
+body.dark-mode .pd-nutrition{background:#0a1208;}
+.pd-nut-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(26,92,42,.08);font-size:.84rem;}
+.pd-nut-row:last-child{border-bottom:none;}
+.pd-nut-row span:first-child{color:#7a6a4a;}
+body.dark-mode .pd-nut-row span:first-child{color:#9a9a82;}
+.pd-nut-row span:last-child{font-weight:700;color:var(--earth);}
+body.dark-mode .pd-nut-row span:last-child{color:#e8dcc8;}
+.pd-certs{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;}
+.pd-cert{background:var(--sage);color:#fff;font-size:.64rem;font-weight:700;padding:5px 12px;border-radius:20px;letter-spacing:.04em;}
+.pd-info-row{font-size:.78rem;color:#7a6a4a;line-height:1.6;margin-top:10px;}
+body.dark-mode .pd-info-row{color:#9a9a82;}
+.pd-info-row strong{color:var(--sage);}
+body.dark-mode .pd-info-row strong{color:#8aca82;}
 </style>
 </head>
 <body>
@@ -765,6 +818,20 @@ body.dark-mode .ft-cert{color:rgba(232,220,200,.35);border-color:rgba(232,220,20
       <p style="font-family:'Fira Mono',monospace;font-size:.7rem;color:#aaa;margin-top:3px" id="mm-coords"></p>
       <a id="mm-link" href="#" target="_blank" style="color:var(--sage);font-size:.83rem;display:block;margin-top:10px;font-weight:700">&#128205; Open in Google Maps &#8594;</a>
     </div>
+  </div>
+</div>
+
+
+<!-- PRODUCT DETAILS MODAL -->
+<div id="pdmodal" onclick="if(event.target===this)closePD()">
+  <div class="pd-inner">
+    <div class="pd-head">
+      <button class="pd-x" onclick="closePD()">&#10005;</button>
+      <h2 id="pd-name"></h2>
+      <div class="pd-tagline" id="pd-tagline"></div>
+      <div class="pd-variety" id="pd-variety"></div>
+    </div>
+    <div class="pd-body" id="pd-body"></div>
   </div>
 </div>
 
@@ -986,7 +1053,7 @@ body.dark-mode .ft-cert{color:rgba(232,220,200,.35);border-color:rgba(232,220,20
         <div class="h-stat-div"></div>
         <div class="h-stat"><div class="h-stat-n">100%</div><div class="h-stat-l">Natural</div></div>
         <div class="h-stat-div"></div>
-        <div class="h-stat"><div class="h-stat-n">1 Ltr</div><div class="h-stat-l">Per Bottle</div></div>
+        <div class="h-stat"><div class="h-stat-n">3</div><div class="h-stat-l">Sizes Each</div></div>
       </div>
     </div>
     <div class="hero-visual">
@@ -1029,8 +1096,8 @@ body.dark-mode .ft-cert{color:rgba(232,220,200,.35);border-color:rgba(232,220,20
   <div class="prod-header fade-up">
     <div>
       <div class="sec-eyebrow"><div class="sec-eyebrow-line"></div><div class="sec-eyebrow-text">Our Collection</div></div>
-      <h2 class="sec-title">6 Pure Cold Pressed Oils</h2>
-      <p class="sec-sub">No heat, no chemicals, no compromise. Every bottle is 1 Ltr of nature&#8217;s finest.</p>
+      <h2 class="sec-title">Pure Cold Pressed Oils</h2>
+      <p class="sec-sub">No heat, no chemicals, no compromise. Available in 500ml, 1L &amp; 5L sizes.</p>
     </div>
   </div>
   <div class="prod-grid" id="prod-grid"></div>
@@ -1232,12 +1299,66 @@ body.dark-mode .ft-cert{color:rgba(232,220,200,.35);border-color:rgba(232,220,20
 <script>
 // ════════════ DATA ════════════
 let products=[
-  {id:1,name:"Ground Nut Oil",desc:"Pure cold pressed groundnut oil &#8212; rich, nutty flavour perfect for everyday Indian cooking.",price:"&#8377;350",priceNum:350,origin:"Andhra Pradesh, India",badge:"Best Seller",emoji:"&#129372;",img:"",qty:100},
-  {id:2,name:"Coconut Oil",desc:"Cold pressed virgin coconut oil &#8212; naturally sweet aroma, ideal for cooking, hair and skin care.",price:"&#8377;420",priceNum:420,origin:"Kerala, India",badge:"Pure Virgin",emoji:"&#129381;",img:"",qty:80},
-  {id:3,name:"Sunflower Oil",desc:"Light cold pressed sunflower oil &#8212; mild flavour, high in Vitamin E and heart-healthy fatty acids.",price:"&#8377;290",priceNum:290,origin:"Karnataka, India",badge:"Heart Healthy",emoji:"&#127803;",img:"",qty:120},
-  {id:4,name:"Mustard (Black) Oil",desc:"Pungent cold pressed black mustard oil &#8212; authentic taste for pickles, dressings and North Indian cooking.",price:"&#8377;320",priceNum:320,origin:"Rajasthan, India",badge:"Authentic",emoji:"&#11035;",img:"",qty:90},
-  {id:5,name:"Sesame Oil",desc:"Golden cold pressed sesame oil &#8212; rich nutty aroma, packed with antioxidants, calcium and minerals.",price:"&#8377;480",priceNum:480,origin:"Rajasthan, India",badge:"Antioxidant Rich",emoji:"&#127806;",img:"",qty:75},
-  {id:6,name:"Safflower Oil",desc:"Light cold pressed safflower oil &#8212; high in linoleic acid, great for high-heat cooking and salads.",price:"&#8377;380",priceNum:380,origin:"Maharashtra, India",badge:"High Oleic",emoji:"&#127800;",img:"",qty:60},
+  {id:1,name:"Groundnut Oil",variety:"Kadiri Variety",tagline:"The Heart of Every Indian Kitchen",
+   desc:"Cold-pressed from premium Kadiri groundnuts &#8212; one of India&#8217;s finest native varieties &#8212; retaining its rich, nutty aroma and natural goodness without a drop of chemicals.",
+   origin:"Andhra Pradesh, India",badge:"Best Seller",emoji:"&#129372;",
+   img:"",images:[],
+   sizes:[{label:"500ml",priceNum:220},{label:"1L",priceNum:400},{label:"5L",priceNum:1900}],
+   priceNum:400,price:"&#8377;400",qty:100,
+   benefits:[{t:"Heart Health",d:"Rich in MUFA &amp; resveratrol &#8212; supports healthy cholesterol levels."},{t:"High Smoke Point",d:"Ideal for deep frying, tempering &amp; everyday Indian cooking."},{t:"Skin Nourishment",d:"Natural Vitamin E content keeps skin soft and moisturised."},{t:"Energy Rich",d:"Dense in healthy fats providing sustained energy throughout the day."}],
+   ingredients:"100% Cold Pressed Groundnut Oil (Kadiri)",
+   storage:"Store in a cool, dry place away from direct sunlight. Consume within 6 months of opening.",
+   allergy:"Contains groundnuts. Not suitable for those with peanut allergy."},
+  {id:2,name:"Coconut Oil",variety:"Kuridi Variety",tagline:"Pure Tropics. Pure Goodness.",
+   desc:"Pressed from fresh mature copra within hours of cracking &#8212; virgin, unrefined, never bleached or deodorised. Retains natural lauric acid, MCTs and a light tropical aroma.",
+   origin:"Kerala, India",badge:"Pure Virgin",emoji:"&#129381;",
+   img:"",images:[],
+   sizes:[{label:"500ml",priceNum:480},{label:"1L",priceNum:900},{label:"5L",priceNum:4300}],
+   priceNum:900,price:"&#8377;900",qty:80,
+   benefits:[{t:"Quick Energy",d:"MCTs are rapidly absorbed and converted to clean energy."},{t:"Brain Health",d:"Lauric acid converts to ketones &#8212; natural fuel for the brain."},{t:"Immune Support",d:"Lauric, capric &amp; caprylic acids are naturally antimicrobial."},{t:"Skin &amp; Hair",d:"Deep-moisturising; restores damaged hair and nourishes skin."}],
+   ingredients:"100% Cold Pressed Virgin Coconut Oil (Copra &#8212; Kuridi)",
+   storage:"Store below 30&#176;C. Solidification below 24&#176;C is natural &#8212; gently warm to liquefy.",
+   allergy:"Tree nut product. Produced in a facility handling tree nuts."},
+  {id:3,name:"Sunflower Oil",variety:"Hulled Seeds",tagline:"Sun-kissed Goodness in Every Drop",
+   desc:"Cold-pressed from premium hulled sunflower seeds, retaining natural Vitamin E, antioxidants and a delicate golden colour &#8212; without a drop of chemicals.",
+   origin:"Karnataka, India",badge:"Heart Healthy",emoji:"&#127803;",
+   img:"",images:[],
+   sizes:[{label:"500ml",priceNum:220},{label:"1L",priceNum:400},{label:"5L",priceNum:1900}],
+   priceNum:400,price:"&#8377;400",qty:120,
+   benefits:[{t:"Heart Health",d:"Rich in Vitamin E &amp; linoleic acid to support healthy cholesterol."},{t:"Skin &amp; Hair",d:"Natural emollient &#8212; moisturises skin and adds shine to hair."},{t:"High Smoke Point",d:"Ideal for deep frying, saut&#233;ing &amp; everyday Indian cooking."},{t:"Immune Support",d:"Antioxidant Vitamin E protects cells from oxidative stress."}],
+   ingredients:"100% Cold Pressed Sunflower Oil",
+   storage:"Store in a cool, dry place away from direct sunlight. Consume within 6 months of opening.",
+   allergy:"Packed in a facility that handles tree nuts and groundnuts."},
+  {id:4,name:"Mustard (Black) Oil",variety:"Bold &amp; Pungent",tagline:"The Bold Flavour of Pure Tradition",
+   desc:"Cold-pressed from sun-dried black mustard seeds in small batches &#8212; unrefined, unbleached &#8212; preserving its natural pungency, golden colour and therapeutic warmth.",
+   origin:"Rajasthan, India",badge:"Authentic",emoji:"&#11035;",
+   img:"",images:[],
+   sizes:[{label:"500ml",priceNum:210},{label:"1L",priceNum:380},{label:"5L",priceNum:1800}],
+   priceNum:380,price:"&#8377;380",qty:90,
+   benefits:[{t:"Antimicrobial",d:"Natural glucosinolates fight bacteria and fungi effectively."},{t:"Joint Relief",d:"Warming properties ease stiff muscles and joints."},{t:"Heart Friendly",d:"High in MUFA &amp; Omega-3 ALA &#8212; supports cardiovascular health."},{t:"Better Digestion",d:"Stimulates bile secretion for improved digestion and appetite."}],
+   ingredients:"100% Cold Pressed Black Mustard Oil",
+   storage:"Store in a cool, dry place. Best used within 12 months of manufacture.",
+   allergy:"Contains mustard. May not be suitable for those with mustard allergy."},
+  {id:5,name:"Sesame Oil",variety:"Natural White",tagline:"Ancient Wisdom. Pure Nutrition.",
+   desc:"Pressed from whole white sesame seeds, loaded with sesamol, sesamin and natural antioxidants &#8212; a prized ingredient in kitchens and wellness rituals for centuries.",
+   origin:"Rajasthan, India",badge:"Antioxidant Rich",emoji:"&#127806;",
+   img:"",images:[],
+   sizes:[{label:"500ml",priceNum:260},{label:"1L",priceNum:480},{label:"5L",priceNum:2300}],
+   priceNum:480,price:"&#8377;480",qty:75,
+   benefits:[{t:"Antioxidant Rich",d:"Sesamol &amp; sesamin slow oxidative aging at the cellular level."},{t:"Bone Strength",d:"Natural calcium and zinc support healthy bones and teeth."},{t:"Hair Nourishment",d:"Traditionally used to strengthen roots and prevent greying."},{t:"Anti-inflammatory",d:"Sesamol helps reduce inflammation throughout the body."}],
+   ingredients:"100% Cold Pressed White Sesame Oil",
+   storage:"Store away from heat and light. Use within 9 months of opening.",
+   allergy:"Contains sesame. Manufactured in a sesame-processing facility."},
+  {id:6,name:"Safflower Oil",variety:"Kusuma &#183; Heart-Friendly",tagline:"India&#8217;s Finest. Pressed Pure.",
+   desc:"Cold-pressed from dehulled safflower seeds &#8212; light, clean and carrying one of the highest natural concentrations of Omega-6 linoleic acid among all cooking oils.",
+   origin:"Maharashtra, India",badge:"Heart Protective",emoji:"&#127800;",
+   img:"",images:[],
+   sizes:[{label:"500ml",priceNum:230},{label:"1L",priceNum:420},{label:"5L",priceNum:2000}],
+   priceNum:420,price:"&#8377;420",qty:60,
+   benefits:[{t:"Heart Protective",d:"Highest Omega-6 among cooking oils &#8212; over 75% linoleic acid."},{t:"Weight Management",d:"CLA content naturally supports lean body composition."},{t:"Skin Radiance",d:"Linoleic acid regulates sebum; ideal for clear, healthy skin."},{t:"High Smoke Point",d:"Exceptionally stable at high heat &#8212; perfect for frying &amp; roasting."}],
+   ingredients:"100% Cold Pressed Safflower Oil",
+   storage:"Store in a cool, dry place away from sunlight. Consume within 6 months of opening.",
+   allergy:"Packed in a facility that handles sesame and groundnuts."},
 ];
 
 let oils=[
@@ -1299,35 +1420,138 @@ window.__setOffers = function(arr){
 };
 
 // ════════════ RENDER PRODUCTS ════════════
+
+// ════════════ PRODUCT DETAILS MODAL ════════════
+function openProductDetails(pid){
+  const p = products.find(x=>x.id===pid);
+  if(!p) return;
+  document.getElementById('pd-name').innerHTML = p.name;
+  document.getElementById('pd-tagline').innerHTML = p.tagline||'';
+  document.getElementById('pd-variety').innerHTML = p.variety||'';
+  const sizes = getSizes(p);
+  let html = '<p style="color:#7a6a4a;line-height:1.7;font-size:.88rem;margin-bottom:4px">'+p.desc+'</p>';
+  // Benefits
+  if(p.benefits && p.benefits.length){
+    html += '<div class="pd-section-title">&#10024; Key Benefits</div>';
+    p.benefits.forEach(b=>{
+      html += `<div class="pd-benefit"><div class="pd-benefit-icon">&#127807;</div><div><div class="pd-benefit-t">${b.t}</div><div class="pd-benefit-d">${b.d}</div></div></div>`;
+    });
+  }
+  // Sizes & prices
+  html += '<div class="pd-section-title">&#128176; Sizes &amp; Prices</div>';
+  html += '<div class="pd-nutrition">';
+  sizes.forEach(s=>{
+    html += `<div class="pd-nut-row"><span>${s.label}</span><span>${formatPrice(s.priceNum, activeCurrency)}</span></div>`;
+  });
+  html += '</div>';
+  // Nutrition (standard for all cold pressed oils)
+  html += '<div class="pd-section-title">&#128202; Nutrition Facts <span style="font-size:.7rem;color:#aaa;font-weight:400">per 100ml</span></div>';
+  html += '<div class="pd-nutrition">'
+    + '<div class="pd-nut-row"><span>Energy</span><span>899 kcal</span></div>'
+    + '<div class="pd-nut-row"><span>Total Fat</span><span>99.9 g</span></div>'
+    + '<div class="pd-nut-row"><span>Carbohydrates</span><span>0 g</span></div>'
+    + '<div class="pd-nut-row"><span>Protein</span><span>0 g</span></div>'
+    + '<div class="pd-nut-row"><span>Trans Fat</span><span>0 g</span></div>'
+    + '<div class="pd-nut-row"><span>Sodium</span><span>0 mg</span></div>'
+    + '</div>';
+  // Certs
+  html += '<div class="pd-certs"><span class="pd-cert">FSSAI Licensed</span><span class="pd-cert">Cold Pressed</span><span class="pd-cert">Chemical Free</span><span class="pd-cert">Non-GMO</span></div>';
+  // Info
+  if(p.ingredients) html += `<div class="pd-info-row"><strong>Ingredients:</strong> ${p.ingredients}</div>`;
+  if(p.storage) html += `<div class="pd-info-row"><strong>Storage:</strong> ${p.storage}</div>`;
+  if(p.allergy) html += `<div class="pd-info-row"><strong>Allergy:</strong> ${p.allergy}</div>`;
+  document.getElementById('pd-body').innerHTML = html;
+  document.getElementById('pdmodal').classList.add('open');
+}
+function closePD(){ document.getElementById('pdmodal').classList.remove('open'); }
+
+// Track selected size per product
+let selectedSizes = {};
+function getSizes(p){
+  return Array.isArray(p.sizes) && p.sizes.length ? p.sizes : [{label:"1L",priceNum:p.priceNum||0}];
+}
+function getSelectedSize(p){
+  const sizes = getSizes(p);
+  const sel = selectedSizes[p.id];
+  return sizes.find(s=>s.label===sel) || sizes.find(s=>s.label==='1L') || sizes[0];
+}
+function selectSize(pid, label){
+  selectedSizes[pid] = label;
+  renderProducts();
+}
+function getMainImage(p){
+  if(p.img) return p.img;
+  if(Array.isArray(p.images) && p.images.length) return p.images[0];
+  return '';
+}
 function renderProducts(){
-  document.getElementById('prod-grid').innerHTML=products.map(p=>`
+  document.getElementById('prod-grid').innerHTML=products.map(p=>{
+    const sizes = getSizes(p);
+    const selSize = getSelectedSize(p);
+    const mainImg = getMainImage(p);
+    const allImgs = [p.img, ...(Array.isArray(p.images)?p.images:[])].filter(Boolean);
+    return `
     <div class="prod-card${p.qty===0?' oos':''}">
       <div class="prod-top-band">
         <div class="ptb-logo">${logoSVG}<div><div class="ptb-brand">SUNSA</div><div class="ptb-sub">ORGANICS</div></div></div>
       </div>
-      <div class="prod-img">
-        ${p.img
-          ?`<img src="${p.img}" alt="${p.name}"
+      <div class="prod-img" id="prodimg-${p.id}">
+        ${mainImg
+          ?`<img src="${mainImg}" alt="${p.name}"
               style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0"
-              onerror="this.parentElement.classList.add('no-img')">`
+              onerror="this.parentElement.classList.add('no-img');this.style.display='none'">`
           :`<div class="prod-no-img"><span>&#128247;</span><div>Add image in Admin</div></div>`
         }
         <div class="prod-badge">${p.qty===0?'Out of Stock':p.badge}</div>
         ${p.qty>0?`<div class="prod-qty-tag">Qty: ${p.qty}</div>`:''}
       </div>
+      ${allImgs.length>1?`<div class="prod-thumbs">${allImgs.map((im,i)=>`<div class="prod-thumb${i===0?' active':''}" onclick="swapProdImg(${p.id},'${im.replace(/'/g,"")}',this)"><img src="${im}" alt=""></div>`).join('')}</div>`:''}
       <div class="prod-body">
         <div class="prod-name">${p.name}</div>
-        <div class="prod-size">1 Ltr &#183; Pure Cold Pressed</div>
+        <div class="prod-variety">${p.variety||''}</div>
         <div class="prod-desc">${p.desc}</div>
-        <div style="font-size:.68rem;color:var(--sage2);font-weight:600;margin-bottom:4px">&#128205; ${p.origin}</div>
+        <div style="font-size:.68rem;color:var(--sage2);font-weight:600;margin-bottom:8px">&#128205; ${p.origin}</div>
+        <div class="prod-sizes">
+          ${sizes.map(s=>`<button class="size-pill${selSize.label===s.label?' active':''}" onclick="selectSize(${p.id},'${s.label}')">${s.label}</button>`).join('')}
+        </div>
+        ${p.benefits&&p.benefits.length?`<button class="prod-details-btn" onclick="openProductDetails(${p.id})">&#9432; View Benefits &amp; Nutrition</button>`:''}
       </div>
       <div class="prod-footer">
-        <div class="prod-price">${formatPrice(p.priceNum, activeCurrency)}</div>
-        <button class="add-btn" onclick="addCart(${p.id})" ${p.qty===0?'disabled':''}>
+        <div>
+          <div class="prod-price">${formatPrice(selSize.priceNum, activeCurrency)}</div>
+          <div class="prod-price-size">per ${selSize.label}</div>
+        </div>
+        <button class="add-btn" onclick="addCartSize(${p.id})" ${p.qty===0?'disabled':''}>
           ${p.qty===0?'Out of Stock':'Add to Cart'}
         </button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+function swapProdImg(pid, src, el){
+  const wrap = document.getElementById('prodimg-'+pid);
+  if(wrap){
+    const img = wrap.querySelector('img');
+    if(img){ img.src = src; img.style.display='block'; wrap.classList.remove('no-img'); }
+  }
+  // update active thumb
+  if(el && el.parentElement){
+    el.parentElement.querySelectorAll('.prod-thumb').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+  }
+}
+
+function addCartSize(pid){
+  const p = products.find(x=>x.id===pid);
+  if(!p) return;
+  const s = getSelectedSize(p);
+  const cartId = pid+'_'+s.label;
+  const ex = cartItems.find(x=>x.id===cartId);
+  if(ex){ ex.qty++; }
+  else { cartItems.push({id:cartId, name:p.name+' ('+s.label+')', priceNum:s.priceNum, emoji:p.emoji, img:getMainImage(p), qty:1}); }
+  updateCart();
+  toast('&#9989; '+p.name+' ('+s.label+') added to cart!');
 }
 
 // ════════════ OIL EXPLORER ════════════
@@ -1469,8 +1693,31 @@ function closeAdmin(){document.getElementById('admin-dash').classList.remove('op
 function switchTab(name){
   document.querySelectorAll('.ad-tab').forEach(t=>t.classList.remove('on'));
   document.querySelectorAll('.ad-nav').forEach(n=>n.classList.remove('on'));
-  document.getElementById('tab-'+name).classList.add('on');
-  document.getElementById('nav-'+name).classList.add('on');
+  const tab=document.getElementById('tab-'+name);
+  const nav=document.getElementById('nav-'+name);
+  if(tab)tab.classList.add('on');
+  if(nav)nav.classList.add('on');
+  // Rebuild the tab's content each time it's opened (defensive — works even if openAdmin had an error)
+  try{
+    if(name==='products') buildProdCards();
+    else if(name==='oils') buildOilCards();
+    else if(name==='origins') buildOriginsGrid();
+    else if(name==='why') buildPriceComparisons();
+    else if(name==='offers') buildOffersAdmin();
+    else if(name==='overview'){ refreshAdminStats(); setTimeout(checkFirebaseStatus,300); }
+  }catch(e){
+    console.error('Tab build error ('+name+'):',e);
+    // Show a friendly message instead of a blank screen
+    if(name==='offers'){
+      const g=document.getElementById('offers-admin-grid');
+      if(g) g.innerHTML='<div style="color:#e07070;padding:30px;text-align:center;grid-column:1/-1">'
+        +'<div style="font-size:2rem;margin-bottom:10px">&#9888;&#65039;</div>'
+        +'<div style="font-weight:700;margin-bottom:8px">Offers data needs a reset</div>'
+        +'<div style="font-size:.82rem;color:#8a9a86;margin-bottom:16px">Click the button below to restore the default combos.</div>'
+        +'<button onclick="resetOffersToDefault()" style="padding:11px 22px;background:linear-gradient(135deg,#1A5C2A,#2D8A40);color:#fff;border:none;border-radius:9px;cursor:pointer;font-weight:700;font-family:Inter,sans-serif">&#8635; Reset to Default Offers</button>'
+        +'</div>';
+    }
+  }
 }
 function refreshAdminStats(){
   document.getElementById('st-prod').textContent=products.length;
@@ -1552,95 +1799,144 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 // ════════════ ADMIN: PRODUCTS ════════════
 function buildProdCards(){
-  document.getElementById('ad-prod-grid').innerHTML=products.map(p=>`
+  const grid = document.getElementById('ad-prod-grid');
+  // Add-new-product button at top
+  let html = '<div style="grid-column:1/-1;margin-bottom:4px"><button class="ad-save" style="width:auto;padding:11px 22px" onclick="addNewProduct()">&#43; Add New Product</button></div>';
+  html += products.map(p=>{
+    const sizes = Array.isArray(p.sizes)&&p.sizes.length ? p.sizes : [{label:"500ml",priceNum:Math.round((p.priceNum||0)*0.55)},{label:"1L",priceNum:p.priceNum||0},{label:"5L",priceNum:(p.priceNum||0)*5}];
+    const imgs = [p.img||'', ...(Array.isArray(p.images)?p.images:[])];
+    while(imgs.length<4) imgs.push('');
+    return `
     <div class="ad-card">
       <div class="ad-card-top">
         <div class="ad-icon" id="adpi-${p.id}">
           ${p.img?`<img src="${p.img}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:10px">`:'<span style="font-size:1.4rem">&#128247;</span>'}
         </div>
-        <div>
+        <div style="flex:1">
           <div class="ad-card-name">${p.name}</div>
-          <div class="ad-card-sub">${p.price} &middot; Qty: ${p.qty}</div>
+          <div class="ad-card-sub">${formatPrice(p.priceNum||0,'INR')} &middot; Qty: ${p.qty}</div>
         </div>
+        <button onclick="deleteProduct(${p.id})" title="Delete product" style="background:rgba(184,68,68,.1);border:1.5px solid #b84444;color:#e07070;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:.9rem">&#128465;</button>
       </div>
 
-      <!-- IMAGE UPLOAD -->
+      <!-- MULTIPLE IMAGES -->
       <div style="background:#0a1208;border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid #1e3a18">
-        <div style="font-size:.68rem;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">
-          &#128247; Product Image
+        <div style="font-size:.68rem;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">&#128247; Product Images (up to 4)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          ${imgs.slice(0,4).map((im,i)=>`
+            <div>
+              <div style="width:100%;height:70px;border-radius:8px;overflow:hidden;background:#080e05;border:1.5px solid #1a2e16;display:flex;align-items:center;justify-content:center" id="pimg-prev-${p.id}-${i}">
+                ${im?`<img src="${im}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:`<span style="font-size:1rem;opacity:.3">${i===0?'Main':i+1}</span>`}
+              </div>
+              <input id="ap-img${i}-${p.id}" value="${im}" placeholder="${i===0?'Main image URL':'Image '+(i+1)}" oninput="prevProdMultiImg(${p.id},${i},this.value)" style="width:100%;padding:6px 8px;border:1.5px solid #1a2e16;border-radius:6px;font-size:.7rem;background:#080e05;color:#bbb;outline:none;margin-top:4px;font-family:'Fira Mono',monospace">
+            </div>`).join('')}
         </div>
-        <div style="width:100%;height:160px;border-radius:10px;overflow:hidden;background:#080e05;
-          border:1.5px solid #1a2e16;margin-bottom:10px;display:flex;align-items:center;
-          justify-content:center;position:relative" id="prod-img-prev-${p.id}">
-          ${p.img
-            ?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover" alt=""
-                onerror="this.parentElement.innerHTML='<span style=font-size:1.5rem;opacity:.5>&#10060;</span><span style=font-size:.65rem;color:#e07070;display:block;margin-top:4px>Image not found</span>'">`
-            :`<div style="text-align:center">
-                <div style="font-size:2.5rem;opacity:.25">&#128247;</div>
-                <div style="font-size:.66rem;color:#3a4e36;margin-top:6px;letter-spacing:.06em;text-transform:uppercase">No image set</div>
-              </div>`
-          }
-        </div>
-        <input id="ap-i-${p.id}" value="${p.img||''}"
-          placeholder="https://mani1824.github.io/sunsorganic/groundnut.jpg"
-          oninput="livePreviewProdImg(${p.id},this.value)"
-          style="width:100%;padding:10px 12px;border:1.5px solid #1a2e16;border-radius:8px;
-          font-size:.8rem;background:#080e05;color:#bbb;outline:none;font-family:'Fira Mono',monospace;transition:border-color .2s"
-          onfocus="this.style.borderColor='var(--sage)'"
-          onblur="this.style.borderColor='#1a2e16'">
-        <div style="font-size:.68rem;color:#3a4e36;margin-top:6px;line-height:1.6">
-          &#128161; Upload product image to GitHub first, then paste URL.<br>
-          <span style="color:#6a8a66">e.g. https://mani1824.github.io/sunsorganic/groundnut-oil.jpg</span>
-        </div>
+        <div style="font-size:.65rem;color:#3a4e36">First image is the main one shown on the card. Others appear as thumbnails.</div>
       </div>
 
       <div class="af-row">
         <div class="af"><label>Product Name</label><input id="ap-n-${p.id}" value="${p.name}"></div>
-        <div class="af"><label>Price (&#8377;)</label><input type="number" id="ap-p-${p.id}" value="${p.priceNum||0}"></div>
+        <div class="af"><label>Variety / Subtitle</label><input id="ap-var-${p.id}" value="${p.variety||''}" placeholder="e.g. Kadiri Variety"></div>
       </div>
+      <div class="af"><label>Tagline</label><input id="ap-tag-${p.id}" value="${p.tagline||''}" placeholder="e.g. The Heart of Every Indian Kitchen"></div>
+
+      <!-- SIZE PRICING -->
+      <div style="background:#0a1208;border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid #1e3a18">
+        <div style="font-size:.68rem;color:#6a7a66;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">&#128176; Size Pricing (INR &#8377;)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          ${sizes.map((s,i)=>`
+            <div>
+              <label style="display:block;font-size:.64rem;color:#4a5e46;margin-bottom:3px;font-weight:700">${s.label}</label>
+              <input type="number" id="ap-size${i}-${p.id}" value="${s.priceNum}" data-label="${s.label}" style="width:100%;padding:7px 9px;border:1.5px solid #1a2e16;border-radius:6px;font-size:.78rem;background:#080e05;color:#bbb;outline:none">
+            </div>`).join('')}
+        </div>
+      </div>
+
       <div class="af-row">
-        <div class="af"><label>Quantity</label><input type="number" id="ap-q-${p.id}" value="${p.qty}" min="0"></div>
+        <div class="af"><label>Stock Quantity</label><input type="number" id="ap-q-${p.id}" value="${p.qty}" min="0"></div>
         <div class="af"><label>Badge</label><input id="ap-b-${p.id}" value="${p.badge}"></div>
       </div>
       <div class="af"><label>Origin Location</label><input id="ap-o-${p.id}" value="${p.origin}"></div>
       <div class="af"><label>Description</label><textarea id="ap-d-${p.id}">${p.desc}</textarea></div>
       <button class="ad-save" onclick="saveProd(${p.id})">&#128190; Save Product</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+  grid.innerHTML = html;
+}
+
+function prevProdMultiImg(pid, idx, url){
+  const prev = document.getElementById('pimg-prev-'+pid+'-'+idx);
+  if(prev){
+    prev.innerHTML = url
+      ? `<img src="${url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`
+      : `<span style="font-size:1rem;opacity:.3">${idx===0?'Main':idx+1}</span>`;
+  }
+  // Update icon if main image
+  if(idx===0){
+    const icon = document.getElementById('adpi-'+pid);
+    if(icon) icon.innerHTML = url?`<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:10px" onerror="this.parentElement.innerHTML='<span style=font-size:1.4rem>&#128247;</span>'">`:'<span style="font-size:1.4rem">&#128247;</span>';
+  }
 }
 
 function livePreviewProdImg(id, url){
-  const wrap = document.getElementById('prod-img-prev-'+id);
-  const icon = document.getElementById('adpi-'+id);
-  if(!wrap) return;
-  if(url){
-    wrap.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover" alt=""
-      onerror="this.parentElement.innerHTML='<span style=font-size:1.5rem;opacity:.5>&#10060;</span><span style=font-size:.65rem;color:#e07070;display:block;margin-top:4px>Image not found</span>'">`;
-    if(icon) icon.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"
-      onerror="this.parentElement.innerHTML='<span style=font-size:1.4rem>&#128247;</span>'">`;
-  } else {
-    wrap.innerHTML=`<div style="text-align:center">
-      <div style="font-size:2.5rem;opacity:.25">&#128247;</div>
-      <div style="font-size:.66rem;color:#3a4e36;margin-top:6px;letter-spacing:.06em;text-transform:uppercase">No image set</div>
-    </div>`;
-    if(icon) icon.innerHTML='<span style="font-size:1.4rem">&#128247;</span>';
-  }
+  prevProdMultiImg(id, 0, url);
+}
+
+async function addNewProduct(){
+  const newId = Math.max(...products.map(p=>p.id),0)+1;
+  const np = {id:newId,name:"New Oil",variety:"",tagline:"",desc:"Describe this product.",
+    origin:"India",badge:"New",emoji:"&#129752;",img:"",images:[],
+    sizes:[{label:"500ml",priceNum:0},{label:"1L",priceNum:0},{label:"5L",priceNum:0}],
+    priceNum:0,price:"&#8377;0",qty:0,benefits:[],ingredients:"",storage:"",allergy:""};
+  products.push(np);
+  buildProdCards();renderProducts();
+  await window.saveProductToFirebase(np);
+  toast('&#43; New product added — scroll down to edit it');
+}
+
+async function deleteProduct(id){
+  if(!confirm('Delete this product permanently?'))return;
+  products = products.filter(p=>p.id!==id);
+  buildProdCards();renderProducts();
+  try{ await firebase.firestore().collection('products').doc(String(id)).delete(); }catch(e){}
+  toast('&#128465; Product deleted for all users');
 }
 
 
 async function saveProd(id){
   const p=products.find(x=>x.id===id);
+  if(!p)return;
   p.name=document.getElementById(`ap-n-${id}`).value;
-  p.priceNum=parseFloat(document.getElementById(`ap-p-${id}`).value)||0;
-  p.price='&#8377;'+p.priceNum.toLocaleString('en-IN');
+  p.variety=document.getElementById(`ap-var-${id}`)?.value||'';
+  p.tagline=document.getElementById(`ap-tag-${id}`)?.value||'';
   p.qty=parseInt(document.getElementById(`ap-q-${id}`).value)||0;
   p.badge=document.getElementById(`ap-b-${id}`).value;
   p.origin=document.getElementById(`ap-o-${id}`).value;
   p.desc=document.getElementById(`ap-d-${id}`).value;
-  p.img=document.getElementById(`ap-i-${id}`)?.value||'';
+  // Multiple images
+  const imgs = [];
+  for(let i=0;i<4;i++){
+    const v = document.getElementById(`ap-img${i}-${id}`)?.value||'';
+    if(v) imgs.push(v);
+  }
+  p.img = imgs[0]||'';
+  p.images = imgs.slice(1);
+  // Size pricing
+  const sizes = [];
+  for(let i=0;i<3;i++){
+    const el = document.getElementById(`ap-size${i}-${id}`);
+    if(el){
+      sizes.push({label: el.getAttribute('data-label'), priceNum: parseFloat(el.value)||0});
+    }
+  }
+  if(sizes.length) p.sizes = sizes;
+  // Main price = 1L price (or first size)
+  const oneL = sizes.find(s=>s.label==='1L') || sizes[0];
+  if(oneL){ p.priceNum = oneL.priceNum; p.price = '&#8377;'+oneL.priceNum.toLocaleString('en-IN'); }
   renderProducts();refreshAdminStats();
   if(window.saveProductToFirebase){
     const ok=await window.saveProductToFirebase(p);
-    toast(ok?'&#9989; "'+p.name+'" saved — LIVE for all users!':'&#9888;&#65039; Not saved! Check Firestore rules in Firebase console.');
+    toast(ok?'&#9989; "'+p.name+'" saved — LIVE for all users!':'&#9888;&#65039; Not saved! Check Firestore rules.');
   }else{toast('&#9989; '+p.name+' updated!');}
 }
 
@@ -1926,11 +2222,13 @@ function normalizeOffer(o){
   };
 }
 function normalizeAllOffers(){
-  if(Array.isArray(offers)){
-    offers = offers.map(normalizeOffer);
-  } else {
-    offers = [];
-  }
+  try{
+    if(Array.isArray(offers)){
+      offers = offers.map(o=>{ try{ return normalizeOffer(o); }catch(e){ return normalizeOffer({id:o&&o.id?o.id:Date.now()}); } });
+    } else {
+      offers = [];
+    }
+  }catch(e){ offers = []; }
 }
 
 // Render offers section on the public site
