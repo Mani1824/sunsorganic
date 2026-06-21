@@ -925,6 +925,9 @@ body.dark-mode .ft-cert{color:rgba(232,220,200,.35);border-color:rgba(232,220,20
           <button class="ad-save secondary" style="width:auto;padding:11px 22px" onclick="buildOffersAdmin()">
             &#8635; Refresh List
           </button>
+          <button style="width:auto;padding:11px 22px;background:rgba(184,68,68,.1);border:1.5px solid #b84444;color:#e07070;border-radius:9px;cursor:pointer;font-size:.84rem;font-weight:700;font-family:Inter,sans-serif" onclick="resetOffersToDefault()">
+            &#8635; Reset to Default Offers
+          </button>
         </div>
 
         <!-- OFFERS CARDS -->
@@ -1288,7 +1291,7 @@ window.__setOils = function(arr){
   }
 };
 window.__setOffers = function(arr){
-  if(Array.isArray(arr)&&arr.length>0){offers = arr;}
+  if(Array.isArray(arr)&&arr.length>0){offers = arr.map(o=>({...o}));}
   renderOffers();
   if(document.getElementById('admin-dash')?.classList.contains('open') && !isEditingField()){
     buildOffersAdmin();
@@ -1903,10 +1906,38 @@ function loadOffersLocally(){
   }catch(e){}
 }
 
+// Guarantee every offer has all required fields (prevents crashes from partial Firestore data)
+function normalizeOffer(o){
+  return {
+    id: o.id,
+    active: o.active === true,
+    name: o.name || 'Untitled Offer',
+    ribbon: o.ribbon || '',
+    desc: o.desc || '',
+    items: Array.isArray(o.items) ? o.items : (typeof o.items === 'string' ? o.items.split(',').map(s=>s.trim()).filter(Boolean) : []),
+    emoji: o.emoji || '\uD83C\uDF81',
+    img: o.img || '',
+    price: o.price || '',
+    priceNum: typeof o.priceNum === 'number' ? o.priceNum : (parseFloat(o.priceNum)||0),
+    originalPrice: o.originalPrice || '',
+    originalPriceNum: typeof o.originalPriceNum === 'number' ? o.originalPriceNum : (parseFloat(o.originalPriceNum)||0),
+    tag: o.tag || '',
+    timer: o.timer || ''
+  };
+}
+function normalizeAllOffers(){
+  if(Array.isArray(offers)){
+    offers = offers.map(normalizeOffer);
+  } else {
+    offers = [];
+  }
+}
+
 // Render offers section on the public site
 function renderOffers(){
   const grid=document.getElementById('offers-grid');
   if(!grid)return;
+  normalizeAllOffers();
   const active=offers.filter(o=>o.active);
   if(!active.length){
     grid.innerHTML='<div class="offers-empty"><div style="font-size:2.5rem;opacity:.2;margin-bottom:10px">&#127807;</div><div>No active offers right now. Check back soon!</div></div>';
@@ -1964,6 +1995,7 @@ function addOfferToCart(offerId){
 function buildOffersAdmin(){
   const grid=document.getElementById('offers-admin-grid');
   if(!grid)return;
+  normalizeAllOffers();
   // Also restore saved header values
   try{
     const h=JSON.parse(localStorage.getItem('sunsa_offers_header')||'{}');
@@ -2115,6 +2147,42 @@ function previewBanner(url){
       <span style="position:absolute;bottom:5px;font-size:.62rem;color:#3a4e36;letter-spacing:.06em;text-transform:uppercase">Banner preview</span>`;
     if(bannerImg)bannerImg.style.display='none';
   }
+}
+
+
+async function resetOffersToDefault(){
+  if(!confirm('This will replace ALL offers with the 4 default combos. Continue?'))return;
+  offers = [
+    {id:1, active:true, name:"Starter Triple Pack", ribbon:"Best Value",
+     desc:"Perfect intro to cold pressing \u2014 three of our most popular oils in one bundle.",
+     items:["Ground Nut Oil","Coconut Oil","Sunflower Oil"],
+     emoji:"\uD83C\uDF81", img:"", price:"\u20B9950", priceNum:950,
+     originalPrice:"\u20B91060", originalPriceNum:1060, tag:"Seasonal Combo", timer:"Limited Stock"},
+    {id:2, active:true, name:"South India Essentials", ribbon:"Top Seller",
+     desc:"The three oils that power South Indian kitchens \u2014 pure, cold pressed, authentic.",
+     items:["Ground Nut Oil","Sesame Oil","Coconut Oil"],
+     emoji:"\uD83C\uDF3F", img:"", price:"\u20B91150", priceNum:1150,
+     originalPrice:"\u20B91250", originalPriceNum:1250, tag:"Regional Combo", timer:""},
+    {id:3, active:true, name:"Heart Health Duo", ribbon:"New",
+     desc:"Two of the most heart-healthy cold pressed oils \u2014 Sunflower and Safflower.",
+     items:["Sunflower Oil","Safflower Oil"],
+     emoji:"\uD83E\uDD80", img:"", price:"\u20B9580", priceNum:580,
+     originalPrice:"\u20B9670", originalPriceNum:670, tag:"Health Combo", timer:""},
+    {id:4, active:false, name:"Complete 6-Oil Set", ribbon:"Max Value",
+     desc:"All six pure cold pressed oils in one complete package. The full Sunsa experience.",
+     items:["Ground Nut","Coconut","Sunflower","Mustard","Sesame","Safflower"],
+     emoji:"\u2B50", img:"", price:"\u20B91900", priceNum:1900,
+     originalPrice:"\u20B92200", originalPriceNum:2200, tag:"Full Collection", timer:"Seasonal Only"}
+  ];
+  normalizeAllOffers();
+  buildOffersAdmin();
+  renderOffers();
+  saveOffersLocally();
+  // Save all to Firestore
+  for(const o of offers){
+    await window.saveOfferToFirebase(o);
+  }
+  toast('\u2705 Offers reset to defaults & saved for all users!');
 }
 
 async function addNewOffer(){
