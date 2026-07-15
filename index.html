@@ -51,6 +51,7 @@ db.collection('settings').onSnapshot(snap=>{
     if(doc.id==='store' && window.__setStore) window.__setStore(doc.data());
     if(doc.id==='branding' && window.__setBranding) window.__setBranding(doc.data());
     if(doc.id==='b2b' && window.__setB2B) window.__setB2B(doc.data());
+    if(doc.id==='hero' && window.__setHero) window.__setHero(doc.data());
     try{localStorage.setItem('sunsa_'+doc.id, JSON.stringify(doc.data()));}catch(e){}
   });
 });
@@ -75,6 +76,9 @@ window.deleteProductFB = async function(id){ try{ await db.collection('products'
 window.saveComboFB = async function(o){ try{ await db.collection('combos').doc(String(o.id)).set(cleanObj(o)); return true;}catch(e){console.error('save combo',e);return false;} };
 window.deleteComboFB = async function(id){ try{ await db.collection('combos').doc(String(id)).delete(); return true;}catch(e){return false;} };
 window.saveSettingFB = async function(docId, data){ try{ await db.collection('settings').doc(docId).set(cleanObj(data)); return true;}catch(e){console.error('save setting',e);return false;} };
+window.saveOrderFB = async function(data){ try{ await db.collection('orders').add(data); return true;}catch(e){console.error('save order',e);return false;} };
+window.loadOrdersFB = async function(){ try{ const s = await db.collection('orders').orderBy('ts','desc').limit(300).get(); return s.docs.map(d=>({_id:d.id, ...d.data()})); }catch(e){ console.error('load orders',e); return null; } };
+window.updateOrderFB = async function(docId, patch){ try{ await db.collection('orders').doc(docId).update(patch); return true;}catch(e){return false;} };
 window.saveInquiryFB = async function(data){ try{ await db.collection('inquiries').add({...data, ts:Date.now()}); return true;}catch(e){console.error('save inquiry',e);return false;} };
 
 window.seedIfEmpty = async function(prods, combosArr){
@@ -125,7 +129,10 @@ img{max-width:100%;display:block;}
 #loader{position:fixed;inset:0;background:var(--forest-d);z-index:100000;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:22px;transition:opacity .7s ease;}
 #loader.hide{opacity:0;pointer-events:none;}
-.loader-mark{width:70px;height:70px;position:relative;animation:spin 3s linear infinite;}
+.loader-mark{width:86px;height:86px;position:relative;}
+.loader-mark svg{width:100%;height:100%;overflow:visible;}
+.sun-spin{transform-box:fill-box;transform-origin:center;animation:spin 7s linear infinite;}
+@media(prefers-reduced-motion:reduce){.sun-spin{animation:none;}}
 .loader-txt{font-family:'Fraunces',serif;color:var(--cream);font-size:1.5rem;letter-spacing:.28em;text-transform:uppercase;font-weight:500;}
 .loader-bar{width:180px;height:2px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden;}
 .loader-fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-l));animation:fill 1.6s ease forwards;}
@@ -218,6 +225,21 @@ header{position:fixed;top:0;left:0;right:0;height:76px;z-index:900;
 @keyframes rot{to{transform:rotate(360deg);}}
 @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-14px);}}
 
+
+/* Hero slideshow */
+.hero-slides{position:absolute;width:min(340px,72vw);aspect-ratio:1;border-radius:50%;overflow:hidden;z-index:3;
+  display:none;box-shadow:0 24px 60px rgba(42,77,49,.28);border:5px solid var(--paper);}
+.hero-slides.on{display:block;}
+.hero-slide{position:absolute;inset:0;opacity:0;transition:opacity .9s ease;}
+.hero-slide.on{opacity:1;}
+.hero-slide img{width:100%;height:100%;object-fit:cover;}
+.hero-dots{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);z-index:6;display:none;gap:7px;
+  background:rgba(255,253,247,.85);padding:7px 11px;border-radius:30px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(42,77,49,.14);}
+.hero-dots.on{display:flex;}
+.hero-dot{width:7px;height:7px;border-radius:50%;background:rgba(56,102,65,.28);cursor:pointer;transition:all .3s;border:none;padding:0;}
+.hero-dot.on{background:var(--gold);width:20px;border-radius:4px;}
+@media(prefers-reduced-motion:reduce){.hero-slide{transition:none;}}
+
 /* ─── TICKER ─── */
 .ticker{background:var(--forest);overflow:hidden;height:50px;display:flex;align-items:center;}
 .ticker-track{display:flex;white-space:nowrap;animation:tick 32s linear infinite;}
@@ -263,8 +285,8 @@ header{position:fixed;top:0;left:0;right:0;height:76px;z-index:900;
 .prod-variety{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);margin:5px 0 10px;}
 .prod-desc{font-size:.85rem;color:var(--ink-soft);line-height:1.6;margin-bottom:14px;flex:1;}
 .prod-origin{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--forest-l);font-weight:600;margin-bottom:14px;}
-.prod-sizes{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px;}
-.size-btn{padding:6px 13px;border-radius:22px;border:1.5px solid var(--line);background:transparent;
+.prod-sizes{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+.size-btn{padding:6px 11px;border-radius:22px;border:1.5px solid var(--line);background:transparent;
   color:var(--forest);font-size:.74rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;}
 .size-btn.on{background:var(--forest);color:#fff;border-color:var(--forest);}
 .size-btn:hover:not(.on){background:rgba(56,102,65,.07);}
@@ -306,6 +328,40 @@ header{position:fixed;top:0;left:0;right:0;height:76px;z-index:900;
 .why-card p{font-size:.86rem;color:var(--ink-soft);line-height:1.65;}
 </style>
 <style>
+
+/* ═══════════ WHY OUR OIL IS BETTER (comparison) ═══════════ */
+#better{background:linear-gradient(180deg,var(--cream),var(--cream-deep));}
+.cmp{background:var(--paper);border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:0 10px 44px var(--shadow);}
+.cmp-row{display:grid;grid-template-columns:1.1fr 1.35fr 1.35fr;align-items:stretch;border-bottom:1px solid var(--line);}
+.cmp-row:last-child{border-bottom:none;}
+.cmp-row.head{border-bottom:2px solid var(--line);}
+.cmp-cell{padding:16px 18px;display:flex;flex-direction:column;justify-content:center;gap:3px;}
+.cmp-attr{font-size:.76rem;font-weight:700;color:var(--forest-d);letter-spacing:.01em;background:rgba(56,102,65,.035);}
+.cmp-us{background:rgba(56,102,65,.055);border-left:2px solid var(--forest);border-right:1px solid var(--line);}
+.cmp-them{background:rgba(176,106,40,.03);}
+.cmp-row.head .cmp-attr{background:transparent;}
+.cmp-row.head .cmp-us,.cmp-row.head .cmp-them{padding-top:22px;padding-bottom:18px;}
+.cmp-brand{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--forest-d);line-height:1.15;}
+.cmp-brand small{display:block;font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-top:4px;}
+.cmp-other{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:#9a8f7a;line-height:1.15;}
+.cmp-other small{display:block;font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#b8a88c;margin-top:4px;}
+.cmp-val{font-size:.83rem;line-height:1.5;display:flex;align-items:flex-start;gap:8px;}
+.cmp-val .ic{flex-shrink:0;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;margin-top:1px;}
+.cmp-us .cmp-val{color:var(--ink);}
+.cmp-us .ic{background:var(--forest);color:#fff;}
+.cmp-them .cmp-val{color:#8a8172;}
+.cmp-them .ic{background:#ded3bd;color:#8a7a5e;}
+.cmp-note{font-size:.72rem;color:var(--ink-soft);line-height:1.6;margin-top:16px;text-align:center;max-width:640px;margin-left:auto;margin-right:auto;}
+@media(max-width:760px){
+  .cmp-row{grid-template-columns:1fr;}
+  .cmp-cell{padding:11px 16px;}
+  .cmp-attr{background:var(--forest);color:#fff;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:9px 16px;}
+  .cmp-us{border-left:none;border-right:none;border-bottom:1px solid var(--line);}
+  .cmp-row.head{display:none;}
+  .cmp-us .cmp-val::after{content:' — Sunsa';font-size:.62rem;color:var(--gold);font-weight:700;letter-spacing:.06em;}
+  .cmp-them .cmp-val::after{content:' — Refined oils';font-size:.62rem;color:#b8a88c;font-weight:700;letter-spacing:.06em;}
+}
+
 /* ═══════════ COMBOS ═══════════ */
 #combos{background:linear-gradient(160deg,var(--cream-deep),var(--cream));}
 .combo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:26px;}
@@ -541,6 +597,24 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
 .toggle .tr::after{content:'';position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.3s;}
 .toggle input:checked+.tr::after{transform:translateX(18px);}
 
+
+/* Sales chart + orders */
+.sales-chart{display:flex;align-items:flex-end;gap:4px;height:130px;padding:10px 0 0;}
+.sbar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;}
+.sbar{width:100%;background:linear-gradient(180deg,#4d8259,#386641);border-radius:4px 4px 0 0;min-height:2px;transition:opacity .2s;position:relative;}
+.sbar:hover{opacity:.75;}
+.sbar-lbl{font-size:.54rem;color:#3a4e32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.ord{background:#0f1c0a;border:1px solid #1c2c14;border-radius:12px;padding:16px 18px;margin-bottom:10px;}
+.ord-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+.ord-cust{color:var(--cream);font-weight:700;font-size:.9rem;}
+.ord-meta{color:#3a4e32;font-size:.7rem;margin-top:2px;font-family:'Fira Mono',monospace;}
+.ord-total{font-family:'Fraunces',serif;color:var(--gold-l);font-size:1.25rem;font-weight:600;white-space:nowrap;}
+.ord-items{color:#7a8a6e;font-size:.78rem;line-height:1.7;border-top:1px solid #1c2c14;padding-top:10px;}
+.ord-addr{color:#5a6b4e;font-size:.74rem;line-height:1.6;margin-top:8px;}
+.ord-status{border:none;border-radius:20px;padding:4px 12px;font-size:.62rem;font-weight:700;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;font-family:'Inter',sans-serif;}
+.ord-status.new{background:rgba(201,146,46,.18);color:#e0b04a;}
+.ord-status.done{background:rgba(77,130,89,.2);color:#8fb573;}
+
 /* Scroll reveal */
 .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease;}
 .reveal.in{opacity:1;transform:translateY(0);}
@@ -569,7 +643,32 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
 <!-- LOADER -->
 <div id="loader">
   <div class="loader-mark">
-    <svg viewBox="0 0 70 70" fill="none"><circle cx="35" cy="28" r="9" fill="#e0b04a"/><g stroke="#e0b04a" stroke-width="2.5" stroke-linecap="round"><line x1="35" y1="6" x2="35" y2="13"/><line x1="35" y1="43" x2="35" y2="50"/><line x1="13" y1="28" x2="20" y2="28"/><line x1="50" y1="28" x2="57" y2="28"/><line x1="19" y1="12" x2="24" y2="17"/><line x1="51" y1="12" x2="46" y2="17"/></g><path d="M22 50 Q35 38 48 50 Q42 62 35 64 Q28 62 22 50Z" fill="#8fb573"/></svg>
+    <svg viewBox="0 0 90 90" fill="none">
+      <g class="sun-spin">
+        <g stroke="#e0b04a" stroke-width="3" stroke-linecap="round">
+          <line x1="45" y1="6"  x2="45" y2="16"/>
+          <line x1="45" y1="74" x2="45" y2="84"/>
+          <line x1="6"  y1="45" x2="16" y2="45"/>
+          <line x1="74" y1="45" x2="84" y2="45"/>
+          <line x1="17.4" y1="17.4" x2="24.5" y2="24.5"/>
+          <line x1="65.5" y1="65.5" x2="72.6" y2="72.6"/>
+          <line x1="17.4" y1="72.6" x2="24.5" y2="65.5"/>
+          <line x1="65.5" y1="24.5" x2="72.6" y2="17.4"/>
+        </g>
+        <g stroke="#e0b04a" stroke-width="2" stroke-linecap="round" opacity=".55">
+          <line x1="55" y1="7.6"  x2="58.5" y2="17.2"/>
+          <line x1="31.5" y1="72.8" x2="35" y2="82.4"/>
+          <line x1="7.6"  y1="35"   x2="17.2" y2="38.5"/>
+          <line x1="72.8" y1="51.5" x2="82.4" y2="55"/>
+          <line x1="35"   y1="7.6"  x2="31.5" y2="17.2"/>
+          <line x1="58.5" y1="72.8" x2="55" y2="82.4"/>
+          <line x1="7.6"  y1="55"   x2="17.2" y2="51.5"/>
+          <line x1="72.8" y1="38.5" x2="82.4" y2="35"/>
+        </g>
+        <circle cx="45" cy="45" r="14" fill="#e0b04a"/>
+        <circle cx="45" cy="45" r="14" fill="none" stroke="#faedcd" stroke-width="1" opacity=".35"/>
+      </g>
+    </svg>
   </div>
   <div class="loader-txt">Sunsa Organics</div>
   <div class="loader-bar"><div class="loader-fill"></div></div>
@@ -590,6 +689,7 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
     <a onclick="scrollToId('products')">Our Oils</a>
     <a onclick="scrollToId('process')">How It's Made</a>
     <a onclick="scrollToId('why')">Why Cold Pressed</a>
+      <a onclick="scrollToId('better')">Why Our Oil Is Better</a>
     <a onclick="scrollToId('wholesale')">Wholesale</a>
     <a onclick="scrollToId('contact')">Order Now</a>
   </nav>
@@ -619,7 +719,7 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
       <div class="hero-stats">
         <div class="hero-stat"><div class="n">6</div><div class="l">Pure Oils</div></div>
         <div class="hero-divider"></div>
-        <div class="hero-stat"><div class="n">4</div><div class="l">Sizes Each</div></div>
+        <div class="hero-stat"><div class="n" id="hs-sizes">3</div><div class="l">Sizes Each</div></div>
         <div class="hero-divider"></div>
         <div class="hero-stat"><div class="n">0</div><div class="l">Chemicals</div></div>
         <div class="hero-divider"></div>
@@ -630,7 +730,9 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
       <div class="hero-ring r1"></div>
       <div class="hero-ring r2"></div>
       <div class="hero-plate"></div>
-      <div class="hero-bottle">🫙</div>
+      <div class="hero-slides" id="hero-slides"></div>
+      <div class="hero-bottle" id="hero-fallback">🫙</div>
+      <div class="hero-dots" id="hero-dots"></div>
       <div class="hero-badge b1"><div class="bi">✅</div><div class="bt">Lab<br>Tested</div></div>
       <div class="hero-badge b2"><div class="bi">🌿</div><div class="bt">FSSAI<br>Certified</div></div>
       <div class="hero-badge b3"><div class="bi">❄️</div><div class="bt">Cold<br>Pressed</div></div>
@@ -648,7 +750,7 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
   <div class="sec-head reveal">
     <div class="eyebrow"><span class="line"></span><span>Our Collection</span></div>
     <h2 class="sec-title">Pure Cold Pressed <em>Oils</em></h2>
-    <p class="sec-sub">Every bottle is single-origin, chemical-free, and cold pressed to preserve full nutrition. Available in 250ml, 500ml, 1L and 5L.</p>
+    <p class="sec-sub">Every bottle is single-origin, chemical-free, and cold pressed to preserve full nutrition. <span id="size-list">Available in 500ml, 1L and 5L.</span></p>
   </div>
   <div class="prod-grid" id="prod-grid"></div>
 </section>
@@ -690,6 +792,64 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
     <div class="why-card reveal"><div class="why-icon">🌿</div><h3>Full Nutrition</h3><p>Retains natural flavour, aroma and 100% of the nutritional profile — Omega-3s, Vitamin E, polyphenols.</p></div>
     <div class="why-card reveal"><div class="why-icon">🫀</div><h3>Better for Health</h3><p>No trans-fats, no additives. Pure cold pressed oils support heart health, immunity and wellness.</p></div>
   </div>
+</section>
+
+
+<!-- WHY OUR OIL IS BETTER -->
+<section class="section" id="better">
+  <div class="sec-head center reveal">
+    <div class="eyebrow"><span class="line"></span><span>The Comparison</span></div>
+    <h2 class="sec-title">Why Our Oil Is <em>Better</em></h2>
+    <p class="sec-sub">Held up against the refined oil on the supermarket shelf — the same seed, a very different journey to the bottle.</p>
+  </div>
+  <div class="cmp reveal">
+    <div class="cmp-row head">
+      <div class="cmp-cell cmp-attr"></div>
+      <div class="cmp-cell cmp-us"><div class="cmp-brand">Sunsa Organics<small>Cold Pressed</small></div></div>
+      <div class="cmp-cell cmp-them"><div class="cmp-other">Ordinary Oil<small>Refined</small></div></div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-cell cmp-attr">How it's pressed</div>
+      <div class="cmp-cell cmp-us"><div class="cmp-val"><span class="ic">✓</span><span>Slow wooden cold press, single pass</span></div></div>
+      <div class="cmp-cell cmp-them"><div class="cmp-val"><span class="ic">✕</span><span>High-speed expeller, then chemical solvent extraction</span></div></div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-cell cmp-attr">Temperature</div>
+      <div class="cmp-cell cmp-us"><div class="cmp-val"><span class="ic">✓</span><span>Stays below 40°C throughout</span></div></div>
+      <div class="cmp-cell cmp-them"><div class="cmp-val"><span class="ic">✕</span><span>Heated up to ~240°C during refining</span></div></div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-cell cmp-attr">Chemicals used</div>
+      <div class="cmp-cell cmp-us"><div class="cmp-val"><span class="ic">✓</span><span>None — mechanical pressing only</span></div></div>
+      <div class="cmp-cell cmp-them"><div class="cmp-val"><span class="ic">✕</span><span>Hexane solvent, bleaching earth, deodorisers</span></div></div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-cell cmp-attr">Nutrients</div>
+      <div class="cmp-cell cmp-us"><div class="cmp-val"><span class="ic">✓</span><span>Vitamin E, antioxidants & polyphenols intact</span></div></div>
+      <div class="cmp-cell cmp-them"><div class="cmp-val"><span class="ic">✕</span><span>Largely stripped out during refining</span></div></div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-cell cmp-attr">Aroma & flavour</div>
+      <div class="cmp-cell cmp-us"><div class="cmp-val"><span class="ic">✓</span><span>Natural — tastes of the seed it came from</span></div></div>
+      <div class="cmp-cell cmp-them"><div class="cmp-val"><span class="ic">✕</span><span>Deodorised to a neutral, flat profile</span></div></div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-cell cmp-attr">Trans fats</div>
+      <div class="cmp-cell cmp-us"><div class="cmp-val"><span class="ic">✓</span><span>Zero — no heat, none formed</span></div></div>
+      <div class="cmp-cell cmp-them"><div class="cmp-val"><span class="ic">✕</span><span>Can form under sustained high heat</span></div></div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-cell cmp-attr">Colour</div>
+      <div class="cmp-cell cmp-us"><div class="cmp-val"><span class="ic">✓</span><span>Natural shade, lightly filtered</span></div></div>
+      <div class="cmp-cell cmp-them"><div class="cmp-val"><span class="ic">✕</span><span>Bleached to look uniformly clear</span></div></div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-cell cmp-attr">Where it's from</div>
+      <div class="cmp-cell cmp-us"><div class="cmp-val"><span class="ic">✓</span><span>Single origin, named variety, lab tested</span></div></div>
+      <div class="cmp-cell cmp-them"><div class="cmp-val"><span class="ic">✕</span><span>Blended from mixed, often unnamed sources</span></div></div>
+    </div>
+  </div>
+  <p class="cmp-note reveal">Refining is a legal, industry-standard process — it makes oil cheap, clear and long-lasting. What it costs you is the nutrition, aroma and character that were in the seed to begin with. That's the trade we don't make.</p>
 </section>
 
 <!-- WHOLESALE / B2B -->
@@ -820,6 +980,34 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
   </div>
 </div>
 
+
+<!-- CHECKOUT DETAILS MODAL -->
+<div class="modal-ov" id="co-modal" onclick="if(event.target===this)closeCheckout()">
+  <div class="pd-modal" style="max-width:520px">
+    <div class="pd-hero">
+      <button class="pd-x" onclick="closeCheckout()">✕</button>
+      <h2>Delivery Details</h2>
+      <div class="pt">Where should we send your order?</div>
+    </div>
+    <div class="pd-content">
+      <div class="fld-row">
+        <div class="fld"><label>Full Name *</label><input id="co-name" placeholder="Your name"></div>
+        <div class="fld"><label>Phone *</label><input id="co-phone" placeholder="+91 ..."></div>
+      </div>
+      <div class="fld"><label>Email *</label><input id="co-email" type="email" placeholder="you@email.com"></div>
+      <div class="fld"><label>Delivery Address *</label><textarea id="co-addr" placeholder="House / street / area"></textarea></div>
+      <div class="fld-row">
+        <div class="fld"><label>City *</label><input id="co-city" placeholder="City"></div>
+        <div class="fld"><label>PIN / ZIP *</label><input id="co-pin" placeholder="500038"></div>
+      </div>
+      <div class="fld"><label>Notes (optional)</label><input id="co-notes" placeholder="Any delivery instructions"></div>
+      <div id="co-summary" style="background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px"></div>
+      <button class="checkout-btn" onclick="payNow()">Pay Securely →</button>
+      <div class="cart-secure">🔒 Secure payment via Razorpay</div>
+    </div>
+  </div>
+</div>
+
 <!-- ADMIN LOGIN -->
 <div class="admin-login-ov" id="admin-login">
   <div class="al-box">
@@ -847,6 +1035,8 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
       <div class="adm-side-sec">Catalog</div>
       <div class="adm-nav" id="nav-products" onclick="admTab('products')"><span class="ni">🫙</span> Products</div>
       <div class="adm-nav" id="nav-combos" onclick="admTab('combos')"><span class="ni">🎁</span> Combos & Offers</div>
+      <div class="adm-side-sec">Sales</div>
+      <div class="adm-nav" id="nav-sales" onclick="admTab('sales')"><span class="ni">📈</span> Sales &amp; Orders</div>
       <div class="adm-side-sec">Store</div>
       <div class="adm-nav" id="nav-store" onclick="admTab('store')"><span class="ni">💰</span> Delivery & Payment</div>
       <div class="adm-nav" id="nav-coupons" onclick="admTab('coupons')"><span class="ni">🏷️</span> Coupons</div>
@@ -861,8 +1051,8 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
         <div class="adm-stats">
           <div class="adm-stat"><div class="sn" id="st-prod">6</div><div class="sl">Products</div></div>
           <div class="adm-stat"><div class="sn" id="st-combo">0</div><div class="sl">Combos</div></div>
-          <div class="adm-stat"><div class="sn" id="st-coupon">0</div><div class="sl">Coupons</div></div>
-          <div class="adm-stat"><div class="sn" id="st-inq">0</div><div class="sl">Enquiries</div></div>
+          <div class="adm-stat"><div class="sn" id="st-orders">0</div><div class="sl">Orders</div></div>
+          <div class="adm-stat"><div class="sn" id="st-rev" style="font-size:1.5rem">₹0</div><div class="sl">Revenue (INR)</div></div>
         </div>
         <div class="adm-info">
           <strong>Quick Guide</strong><br>
@@ -871,9 +1061,39 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
           🎁 <strong>Combos</strong> — bundle offers with images & pricing<br>
           💰 <strong>Delivery & Payment</strong> — delivery charge, Razorpay key<br>
           🏷️ <strong>Coupons</strong> — discount codes<br>
+          📈 <strong>Sales &amp; Orders</strong> — revenue, order history, export to CSV<br>
           🏢 <strong>Wholesale</strong> — B2B gallery images<br>
           📥 <strong>Enquiries</strong> — wholesale form submissions<br><br>
           <span class="tip">All changes save to the cloud and update live for every visitor.</span>
+        </div>
+        <div class="adm-info" style="margin-top:14px">
+          <strong>⚠️ Firestore rules — orders &amp; enquiries need these</strong><br>
+          <span style="font-size:.72rem;color:#5a6b4e">Customers aren\'t logged in, so they need permission to <em>create</em> orders and enquiries — but only you should read them. Paste this in Firebase Console → Firestore → Rules:</span>
+          <pre style="background:#060c04;border:1px solid #1c2c14;border-radius:8px;padding:12px;margin-top:8px;overflow-x:auto;font-family:'Fira Mono',monospace;font-size:.66rem;color:#8fb573;line-height:1.6">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /products/{d} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /combos/{d} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /settings/{d} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /orders/{d} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+    match /inquiries/{d} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+  }
+}</pre>
         </div>
       </div>
       <!-- BRANDING -->
@@ -895,6 +1115,16 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
           <div class="af"><label>Sub-headline</label><textarea id="br-hero-s">Make the switch to cold pressed — pure, natural, and full of nutrition.</textarea></div>
         </div>
         <div class="adm-box">
+          <div class="adm-box-t">Hero Slideshow Images</div>
+          <div style="font-size:.72rem;color:#3a4e32;line-height:1.7;margin-bottom:12px">
+            Add <strong style="color:#8a9a7e">5–10 photos</strong> for the big circle on the home page. They fade from one to the next <strong style="color:#8a9a7e">every 3 seconds</strong>.<br>
+            Square photos look best. Leave this empty to show the animated bottle instead.
+          </div>
+          <div id="hero-img-rows"></div>
+          <button id="hero-add-btn" onclick="addHeroRow()" style="width:100%;padding:9px;background:rgba(56,102,65,.15);border:1.5px dashed #4d8259;color:#8fb573;border-radius:8px;cursor:pointer;font-size:.76rem;font-weight:700;font-family:'Inter',sans-serif;margin-bottom:10px">+ Add hero image</button>
+          <button class="adm-save" onclick="saveHero()">💾 Save Hero Images</button>
+        </div>
+        <div class="adm-box">
           <div class="adm-box-t">Contact Details</div>
           <div class="af-row">
             <div class="af"><label>Phone / WhatsApp</label><input id="br-phone" value="+91 80191 83311"></div>
@@ -907,6 +1137,11 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
       <!-- PRODUCTS -->
       <div class="adm-tab" id="tab-products">
         <div class="adm-h">🫙 Products & Prices</div>
+        <div class="adm-info" style="margin-bottom:14px">
+          <strong>You can add as many products as you like</strong> — a 7th oil, a gift box, anything. Use <strong>+ Add New Product</strong> below, then fill in its details and prices.<br>
+          Each product can also have <strong>as many sizes as you need</strong> — use <strong>+ Add another size</strong> inside the product, or ✕ to remove one.<br>
+          <span class="tip">Every change saves to the cloud and appears on the live site straight away.</span>
+        </div>
         <div style="margin-bottom:18px"><button class="adm-btn-add" onclick="addProduct()">+ Add New Product</button></div>
         <div class="adm-grid" id="adm-prod-grid"></div>
       </div>
@@ -919,6 +1154,22 @@ footer{background:var(--forest-d);color:rgba(250,237,205,.5);padding:60px clamp(
         </div>
         <div class="adm-grid" id="adm-combo-grid"></div>
       </div>
+      <!-- SALES -->
+      <div class="adm-tab" id="tab-sales">
+        <div class="adm-h">📈 Sales &amp; Orders</div>
+        <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center">
+          <select id="sales-range" onchange="renderSales()" style="padding:9px 12px;border:1.5px solid #1c2c14;border-radius:9px;background:#0a1206;color:#c5d0bc;font-size:.82rem;font-family:'Inter',sans-serif;outline:none">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="0">All time</option>
+          </select>
+          <button class="adm-save sec" style="width:auto;padding:9px 18px;margin:0" onclick="loadSales()">↺ Refresh</button>
+          <button class="adm-save sec" style="width:auto;padding:9px 18px;margin:0" onclick="exportSalesCSV()">⭳ Export CSV</button>
+        </div>
+        <div id="sales-body"><div class="adm-info">Loading sales…</div></div>
+      </div>
+
       <!-- STORE -->
       <div class="adm-tab" id="tab-store">
         <div class="adm-h">💰 Delivery & Payment</div>
@@ -968,42 +1219,42 @@ let products = [
   {id:1,name:"Groundnut Oil",variety:"Kadiri Variety",tagline:"The Heart of Every Indian Kitchen",
    desc:"Cold-pressed from premium Kadiri groundnuts — one of India's finest native varieties — retaining rich, nutty aroma and natural goodness without a drop of chemicals.",
    origin:"Andhra Pradesh, India",badge:"Best Seller",emoji:"🥜",img:"",images:[],
-   sizes:[{label:"250ml",inr:120,usd:5},{label:"500ml",inr:220,usd:8},{label:"1L",inr:400,usd:14},{label:"5L",inr:1900,usd:62}],
+   sizes:[{label:"500ml",inr:220,usd:8},{label:"1L",inr:400,usd:14},{label:"5L",inr:1900,usd:62}],
    qty:100,
    benefits:[{t:"Heart Health",d:"Rich in MUFA & resveratrol — supports healthy cholesterol."},{t:"High Smoke Point",d:"Ideal for deep frying, tempering & everyday cooking."},{t:"Skin Nourishment",d:"Natural Vitamin E keeps skin soft and moisturised."},{t:"Energy Rich",d:"Dense in healthy fats for sustained energy."}],
    ingredients:"100% Cold Pressed Groundnut Oil (Kadiri)",storage:"Store cool & dry, away from sunlight. Use within 6 months of opening.",allergy:"Contains groundnuts. Not for those with peanut allergy."},
   {id:2,name:"Coconut Oil",variety:"Kuridi Variety",tagline:"Pure Tropics. Pure Goodness.",
    desc:"Pressed from fresh mature copra within hours of cracking — virgin, unrefined, never bleached. Retains natural lauric acid, MCTs and a light tropical aroma.",
    origin:"Kerala, India",badge:"Pure Virgin",emoji:"🥥",img:"",images:[],
-   sizes:[{label:"250ml",inr:260,usd:9},{label:"500ml",inr:480,usd:16},{label:"1L",inr:900,usd:30},{label:"5L",inr:4300,usd:140}],
+   sizes:[{label:"500ml",inr:480,usd:16},{label:"1L",inr:900,usd:30},{label:"5L",inr:4300,usd:140}],
    qty:80,
    benefits:[{t:"Quick Energy",d:"MCTs are rapidly absorbed and converted to clean energy."},{t:"Brain Health",d:"Lauric acid converts to ketones — fuel for the brain."},{t:"Immune Support",d:"Lauric, capric & caprylic acids are naturally antimicrobial."},{t:"Skin & Hair",d:"Deep-moisturising; restores hair and nourishes skin."}],
    ingredients:"100% Cold Pressed Virgin Coconut Oil (Copra — Kuridi)",storage:"Store below 30°C. Solidifies below 24°C — gently warm to liquefy.",allergy:"Tree nut product. Produced in a facility handling tree nuts."},
   {id:3,name:"Sunflower Oil",variety:"Hulled Seeds",tagline:"Sun-kissed Goodness in Every Drop",
    desc:"Cold-pressed from premium hulled sunflower seeds, retaining natural Vitamin E, antioxidants and a delicate golden colour — without a drop of chemicals.",
    origin:"Karnataka, India",badge:"Heart Healthy",emoji:"🌻",img:"",images:[],
-   sizes:[{label:"250ml",inr:120,usd:5},{label:"500ml",inr:220,usd:8},{label:"1L",inr:400,usd:14},{label:"5L",inr:1900,usd:62}],
+   sizes:[{label:"500ml",inr:220,usd:8},{label:"1L",inr:400,usd:14},{label:"5L",inr:1900,usd:62}],
    qty:120,
    benefits:[{t:"Heart Health",d:"Rich in Vitamin E & linoleic acid for healthy cholesterol."},{t:"Skin & Hair",d:"Natural emollient — moisturises skin and adds shine."},{t:"High Smoke Point",d:"Ideal for deep frying, sautéing & everyday cooking."},{t:"Immune Support",d:"Antioxidant Vitamin E protects cells from oxidative stress."}],
    ingredients:"100% Cold Pressed Sunflower Oil",storage:"Store cool & dry, away from sunlight. Use within 6 months of opening.",allergy:"Packed in a facility handling tree nuts and groundnuts."},
   {id:4,name:"Mustard (Black) Oil",variety:"Bold & Pungent",tagline:"The Bold Flavour of Pure Tradition",
    desc:"Cold-pressed from sun-dried black mustard seeds in small batches — unrefined, unbleached — preserving natural pungency, golden colour and therapeutic warmth.",
    origin:"Rajasthan, India",badge:"Authentic",emoji:"🟤",img:"",images:[],
-   sizes:[{label:"250ml",inr:110,usd:4},{label:"500ml",inr:210,usd:7},{label:"1L",inr:380,usd:13},{label:"5L",inr:1800,usd:59}],
+   sizes:[{label:"500ml",inr:210,usd:7},{label:"1L",inr:380,usd:13},{label:"5L",inr:1800,usd:59}],
    qty:90,
    benefits:[{t:"Antimicrobial",d:"Natural glucosinolates fight bacteria and fungi."},{t:"Joint Relief",d:"Warming properties ease stiff muscles and joints."},{t:"Heart Friendly",d:"High in MUFA & Omega-3 ALA — supports heart health."},{t:"Better Digestion",d:"Stimulates bile secretion for improved digestion."}],
    ingredients:"100% Cold Pressed Black Mustard Oil",storage:"Store cool & dry. Best within 12 months of manufacture.",allergy:"Contains mustard. May not suit those with mustard allergy."},
   {id:5,name:"Sesame Oil",variety:"Natural White",tagline:"Ancient Wisdom. Pure Nutrition.",
    desc:"Pressed from whole white sesame seeds, loaded with sesamol, sesamin and natural antioxidants — a prized ingredient in kitchens and wellness rituals for centuries.",
    origin:"Rajasthan, India",badge:"Antioxidant Rich",emoji:"🌰",img:"",images:[],
-   sizes:[{label:"250ml",inr:140,usd:5},{label:"500ml",inr:260,usd:9},{label:"1L",inr:480,usd:16},{label:"5L",inr:2300,usd:75}],
+   sizes:[{label:"500ml",inr:260,usd:9},{label:"1L",inr:480,usd:16},{label:"5L",inr:2300,usd:75}],
    qty:75,
    benefits:[{t:"Antioxidant Rich",d:"Sesamol & sesamin slow oxidative aging."},{t:"Bone Strength",d:"Natural calcium and zinc support bones and teeth."},{t:"Hair Nourishment",d:"Traditionally used to strengthen roots and prevent greying."},{t:"Anti-inflammatory",d:"Sesamol helps reduce inflammation."}],
    ingredients:"100% Cold Pressed White Sesame Oil",storage:"Store away from heat and light. Use within 9 months of opening.",allergy:"Contains sesame. Made in a sesame-processing facility."},
   {id:6,name:"Safflower Oil",variety:"Kusuma · Heart-Friendly",tagline:"India's Finest. Pressed Pure.",
    desc:"Cold-pressed from dehulled safflower seeds — light, clean and carrying one of the highest natural concentrations of Omega-6 linoleic acid among all cooking oils.",
    origin:"Maharashtra, India",badge:"Heart Protective",emoji:"🌼",img:"",images:[],
-   sizes:[{label:"250ml",inr:130,usd:5},{label:"500ml",inr:230,usd:8},{label:"1L",inr:420,usd:14},{label:"5L",inr:2000,usd:65}],
+   sizes:[{label:"500ml",inr:230,usd:8},{label:"1L",inr:420,usd:14},{label:"5L",inr:2000,usd:65}],
    qty:60,
    benefits:[{t:"Heart Protective",d:"Highest Omega-6 among cooking oils — over 75% linoleic acid."},{t:"Weight Management",d:"CLA content supports lean body composition."},{t:"Skin Radiance",d:"Linoleic acid regulates sebum for clear skin."},{t:"High Smoke Point",d:"Exceptionally stable at high heat."}],
    ingredients:"100% Cold Pressed Safflower Oil",storage:"Store cool & dry, away from sunlight. Use within 6 months of opening.",allergy:"Packed in a facility handling sesame and groundnuts."},
@@ -1042,6 +1293,9 @@ let store = {
 };
 let branding = {name:"Sunsa Organics",tag:"Pure Cold Pressed Oils",logo:"",heroH:"Your Health Deserves *Better Oil*",heroS:"Make the switch to cold pressed — pure, natural, and full of nutrition.",phone:"+91 80191 83311",email:"hello@sunsaorganics.com",loc:"S.R. Nagar, Hyderabad"};
 let b2bImages = ["","","","",""];
+let heroImages = [];
+let heroIdx = 0;
+let heroTimer = null;
 let inquiries = [];
 
 const SYM = {INR:'₹', USD:'$'};
@@ -1100,7 +1354,20 @@ function renderProducts(){
       </div>
     </div>`;
   }).join('');
+  updateSizeCopy();
   observeReveals();
+}
+// Keep hero stat + section copy in sync with the real sizes admin has set
+function updateSizeCopy(){
+  const labels = [];
+  products.forEach(p=>getSizes(p).forEach(s=>{ if(s.label && !labels.includes(s.label)) labels.push(s.label); }));
+  const hs = document.getElementById('hs-sizes');
+  if(hs) hs.textContent = labels.length || '—';
+  const sl = document.getElementById('size-list');
+  if(sl && labels.length){
+    const txt = labels.length===1 ? labels[0] : labels.slice(0,-1).join(', ')+' and '+labels[labels.length-1];
+    sl.textContent = 'Available in '+txt+'.';
+  }
 }
 function setSize(pid,label){ selSizes[pid]=label; renderProducts(); }
 function setProdImg(pid,src){ selImgs[pid]=src; renderProducts(); }
@@ -1267,32 +1534,74 @@ function applyCoupon(){
 }
 
 // ═══════════════ CHECKOUT (Razorpay) ═══════════════
-function checkout(){
-  if(!cart.length){ toast('Your cart is empty'); return; }
+function cartTotals(){
   const sub = cart.reduce((s,i)=>s+priceOf(i)*i.qty,0);
   const disc = calcDiscount(sub);
   const del = calcDelivery(sub-disc);
-  const total = sub-disc+del;
+  return { sub, disc, del, total: sub-disc+del };
+}
+function checkout(){
+  if(!cart.length){ toast('Your cart is empty'); return; }
   if(!store.rzpKey){
     alert('Payment is not set up yet.\n\nThe store owner needs to add their Razorpay Key ID in Admin → Delivery & Payment.');
     return;
   }
-  // Razorpay charges in the smallest unit. INR→paise, USD→cents
+  const t = cartTotals();
+  document.getElementById('co-summary').innerHTML =
+      '<div class="csum-row"><span>Subtotal</span><span>'+money(t.sub)+'</span></div>'
+    + (t.disc>0?'<div class="csum-row"><span>Discount</span><span style="color:var(--forest-l)">-'+money(t.disc)+'</span></div>':'')
+    + '<div class="csum-row"><span>Delivery</span><span>'+(t.del===0?'FREE':money(t.del))+'</span></div>'
+    + '<div class="csum-row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-weight:800"><span>Total</span><span>'+money(t.total)+'</span></div>';
+  closeCart();
+  document.getElementById('co-modal').classList.add('open');
+}
+function closeCheckout(){ document.getElementById('co-modal').classList.remove('open'); }
+
+function payNow(){
+  const v = id => (document.getElementById(id)?.value||'').trim();
+  const cust = { name:v('co-name'), phone:v('co-phone'), email:v('co-email'),
+                 address:v('co-addr'), city:v('co-city'), pin:v('co-pin'), notes:v('co-notes') };
+  if(!cust.name || !cust.phone || !cust.email || !cust.address || !cust.city || !cust.pin){
+    toast('Please fill all required fields');
+    return;
+  }
+  const t = cartTotals();
+  const items = cart.map(i=>({ name:i.name, qty:i.qty, unit:priceOf(i), line:priceOf(i)*i.qty }));
   const opts = {
     key: store.rzpKey,
-    amount: Math.round(total*100),
+    amount: Math.round(t.total*100),
     currency: currency,
     name: store.storeName||'Sunsa Organics',
     description: cart.map(i=>i.name).join(', ').slice(0,240),
-    handler: function(r){
-      toast('✅ Payment successful!');
-      cart=[]; appliedCoupon=null; updateCart(); closeCart();
-      alert('Thank you for your order!\n\nPayment ID: '+r.razorpay_payment_id+'\n\nWe will contact you shortly for delivery.');
+    prefill: { name:cust.name, email:cust.email, contact:cust.phone },
+    notes: { address: cust.address+', '+cust.city+' '+cust.pin },
+    handler: async function(r){
+      const order = {
+        ts: Date.now(),
+        paymentId: r.razorpay_payment_id || '',
+        currency, items,
+        subtotal: t.sub, discount: t.disc, delivery: t.del, total: t.total,
+        coupon: appliedCoupon ? appliedCoupon.code : '',
+        customer: cust,
+        status: 'new'
+      };
+      const saved = await window.saveOrderFB(order);
+      if(!saved){
+        // Don't lose the order if the cloud write fails
+        try{
+          const q = JSON.parse(localStorage.getItem('sunsa_pending_orders')||'[]');
+          q.push(order); localStorage.setItem('sunsa_pending_orders', JSON.stringify(q));
+        }catch(e){}
+      }
+      cart=[]; appliedCoupon=null; updateCart(); closeCheckout();
+      toast('✅ Order placed!');
+      alert('Thank you for your order!\n\nPayment ID: '+order.paymentId+'\n\nWe will contact you shortly about delivery.');
     },
+    modal: { ondismiss: function(){ toast('Payment cancelled'); } },
     theme:{ color:'#386641' }
   };
   try{ new Razorpay(opts).open(); }
-  catch(e){ toast('Payment error. Check Razorpay key.'); console.error(e); }
+  catch(e){ toast('Payment error. Check the Razorpay key.'); console.error(e); }
 }
 
 // ═══════════════ WHATSAPP ═══════════════
@@ -1357,11 +1666,65 @@ function renderTicker(){
   if(t) t.innerHTML = all.map(i=>`<div class="ticker-item"><span class="d"></span>${i}</div>`).join('');
 }
 
+
+// ═══════════════ HERO SLIDESHOW ═══════════════
+function renderHero(){
+  const wrap = document.getElementById('hero-slides');
+  const dots = document.getElementById('hero-dots');
+  const fallback = document.getElementById('hero-fallback');
+  if(!wrap) return;
+  const imgs = (heroImages||[]).filter(Boolean).slice(0,10);
+  clearInterval(heroTimer); heroTimer=null;
+
+  if(!imgs.length){
+    // No images set — keep the animated bottle
+    wrap.classList.remove('on'); wrap.innerHTML='';
+    dots.classList.remove('on'); dots.innerHTML='';
+    if(fallback) fallback.style.display='';
+    return;
+  }
+  if(fallback) fallback.style.display='none';
+  wrap.classList.add('on');
+  heroIdx = 0;
+  wrap.innerHTML = imgs.map((src,i)=>
+    `<div class="hero-slide${i===0?' on':''}"><img src="${src}" alt="" onerror="this.parentElement.style.display='none'"></div>`
+  ).join('');
+
+  if(imgs.length>1){
+    dots.classList.add('on');
+    dots.innerHTML = imgs.map((_,i)=>`<button class="hero-dot${i===0?' on':''}" aria-label="Slide ${i+1}" onclick="heroGo(${i},true)"></button>`).join('');
+    startHeroTimer();
+  } else {
+    dots.classList.remove('on'); dots.innerHTML='';
+  }
+}
+function heroGo(i, manual){
+  const slides = document.querySelectorAll('#hero-slides .hero-slide');
+  const dots = document.querySelectorAll('#hero-dots .hero-dot');
+  if(!slides.length) return;
+  heroIdx = (i + slides.length) % slides.length;
+  slides.forEach((s,n)=>s.classList.toggle('on', n===heroIdx));
+  dots.forEach((d,n)=>d.classList.toggle('on', n===heroIdx));
+  if(manual) startHeroTimer();   // restart the 3s clock after a click
+}
+function startHeroTimer(){
+  clearInterval(heroTimer);
+  const n = document.querySelectorAll('#hero-slides .hero-slide').length;
+  if(n<2) return;
+  heroTimer = setInterval(()=>heroGo(heroIdx+1), 3000);   // every 3 seconds
+}
+// Pause while the tab is hidden so slides don't race in the background
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) clearInterval(heroTimer);
+  else startHeroTimer();
+});
+
 // ═══════════════ FIREBASE SYNC SETTERS ═══════════════
 window.__setProducts = function(arr){ products = arr; renderProducts(); if(admOpen()&&!editing()) buildAdmProducts(); refreshStats(); };
 window.__setCombos = function(arr){ if(Array.isArray(arr)&&arr.length) combos=arr; renderCombos(); if(admOpen()&&!editing()) buildAdmCombos(); refreshStats(); };
 window.__setStore = function(d){ store={...store,...d}; updateCart(); if(admOpen()&&!editing()){buildAdmStore();buildAdmCoupons();} refreshStats(); };
 window.__setBranding = function(d){ branding={...branding,...d}; applyBranding(); };
+window.__setHero = function(d){ if(d&&Array.isArray(d.images)) heroImages=d.images; renderHero(); if(admOpen()&&!editing()) buildHeroInputs(); };
 window.__setB2B = function(d){ if(d&&Array.isArray(d.images)) b2bImages=d.images; renderB2BGallery(); if(admOpen()) buildB2BInputs(); };
 
 function admOpen(){ return document.getElementById('admin').classList.contains('open'); }
@@ -1379,7 +1742,7 @@ function openLogin(){ document.getElementById('admin-login').classList.add('open
 function closeLogin(){ document.getElementById('admin-login').classList.remove('open'); }
 function openAdmin(){
   document.getElementById('admin').classList.add('open');
-  buildAdmProducts(); buildAdmCombos(); buildAdmStore(); buildAdmCoupons(); buildB2BInputs(); buildInquiries(); loadBrandingForm(); refreshStats();
+  buildAdmProducts(); buildAdmCombos(); buildAdmStore(); buildAdmCoupons(); buildB2BInputs(); buildHeroInputs(); buildInquiries(); loadBrandingForm(); loadSales(); refreshStats();
   setTimeout(checkFB,600);
 }
 function closeAdmin(){ document.getElementById('admin').classList.remove('open'); }
@@ -1394,15 +1757,18 @@ function admTab(name){
     else if(name==='store') buildAdmStore();
     else if(name==='coupons') buildAdmCoupons();
     else if(name==='b2b') buildB2BInputs();
+    else if(name==='sales') renderSales();
     else if(name==='inquiries') buildInquiries();
-    else if(name==='branding') loadBrandingForm();
+    else if(name==='branding'){ loadBrandingForm(); buildHeroInputs(); }
     else if(name==='overview'){ refreshStats(); setTimeout(checkFB,300); }
   }catch(e){ console.error('tab',name,e); }
 }
 function refreshStats(){
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
   set('st-prod',products.length); set('st-combo',combos.length);
-  set('st-coupon',(store.coupons||[]).length); set('st-inq',inquiries.length);
+  set('st-orders', orders.length);
+  const revInr = orders.filter(o=>o.currency==='INR').reduce((s,o)=>s+(o.total||0),0);
+  set('st-rev','₹'+Math.round(revInr).toLocaleString('en-IN'));
 }
 async function checkFB(){
   const dot=document.querySelector('#fb-status .dot'), txt=document.getElementById('fb-status-txt'), det=document.getElementById('fb-status-detail');
@@ -1414,7 +1780,7 @@ async function checkFB(){
     det.innerHTML='Logged in as '+window._adminUser.email;
   }catch(e){
     dot.style.background='#e08080'; txt.innerHTML='⚠️ Cloud WRITE BLOCKED'; txt.style.color='#e08080';
-    det.innerHTML='Fix Firestore rules: allow read: if true; allow write: if request.auth != null;';
+    det.innerHTML='Firestore is blocking writes. Copy the rules shown below into Firebase Console → Firestore → Rules.';
   }
 }
 function prevImg(prevId,url){
@@ -1446,6 +1812,67 @@ async function saveBranding(){
   toast(ok?'✅ Branding saved — live for all!':'⚠️ Saved locally. Check Firestore rules.');
 }
 
+
+// ── Hero slideshow images (admin) ──
+function heroRowHTML(url, i){
+  return '<div class="hero-row" style="display:grid;grid-template-columns:56px 1fr 30px;gap:8px;margin-bottom:8px;align-items:center">'
+    + '<div class="imgprev hero-prev" style="height:46px;width:56px;margin:0">'
+      + (url?'<img src="'+url.replace(/"/g,'&quot;')+'" onerror="this.parentElement.innerHTML=\'<span class=ph style=font-size:1rem>⚠️</span>\'">':'<span class="ph" style="font-size:1rem">🖼️</span>')
+    + '</div>'
+    + '<input class="hero-url" value="'+String(url||'').replace(/"/g,'&quot;')+'" placeholder="https://...image.jpg" oninput="prevHeroRow(this)" style="font-size:.74rem;padding:8px 10px;font-family:\'Fira Mono\',monospace">'
+    + '<button onclick="rmHeroRow(this)" title="Remove" style="background:rgba(184,68,63,.1);border:1px solid #b8443f;color:#e08080;border-radius:6px;cursor:pointer;height:30px;font-size:.8rem;padding:0">✕</button>'
+    + '</div>';
+}
+function buildHeroInputs(){
+  const wrap = document.getElementById('hero-img-rows');
+  if(!wrap) return;
+  const imgs = (heroImages||[]).slice(0,10);
+  wrap.innerHTML = imgs.length ? imgs.map(heroRowHTML).join('') : heroRowHTML('',0);
+  updateHeroAddBtn();
+}
+function prevHeroRow(input){
+  const prev = input.parentElement.querySelector('.hero-prev');
+  const url = input.value.trim();
+  if(prev) prev.innerHTML = url
+    ? '<img src="'+url.replace(/"/g,'&quot;')+'" onerror="this.parentElement.innerHTML=\'<span class=ph style=font-size:1rem>⚠️</span>\'">'
+    : '<span class="ph" style="font-size:1rem">🖼️</span>';
+}
+function updateHeroAddBtn(){
+  const btn = document.getElementById('hero-add-btn');
+  const n = document.querySelectorAll('#hero-img-rows .hero-row').length;
+  if(!btn) return;
+  const full = n>=10;
+  btn.disabled = full;
+  btn.style.opacity = full ? '.4' : '1';
+  btn.style.cursor = full ? 'not-allowed' : 'pointer';
+  btn.textContent = full ? 'Maximum 10 images' : '+ Add hero image ('+n+'/10)';
+}
+function addHeroRow(){
+  const wrap = document.getElementById('hero-img-rows');
+  if(!wrap) return;
+  if(wrap.querySelectorAll('.hero-row').length>=10){ toast('Maximum 10 hero images'); return; }
+  wrap.insertAdjacentHTML('beforeend', heroRowHTML('',0));
+  updateHeroAddBtn();
+  const rows = wrap.querySelectorAll('.hero-row');
+  rows[rows.length-1].querySelector('.hero-url').focus();
+}
+function rmHeroRow(btn){
+  const row = btn.closest('.hero-row');
+  if(row) row.remove();
+  const wrap = document.getElementById('hero-img-rows');
+  if(wrap && !wrap.querySelectorAll('.hero-row').length) wrap.innerHTML = heroRowHTML('',0);
+  updateHeroAddBtn();
+}
+async function saveHero(){
+  const urls = [...document.querySelectorAll('#hero-img-rows .hero-url')]
+    .map(i=>i.value.trim()).filter(Boolean).slice(0,10);
+  heroImages = urls;
+  renderHero();
+  try{ localStorage.setItem('sunsa_hero', JSON.stringify({images:urls})); }catch(e){}
+  const ok = await window.saveSettingFB('hero', {images:urls});
+  toast(ok ? (urls.length ? '✅ '+urls.length+' hero image'+(urls.length>1?'s':'')+' saved — live!' : '✅ Hero images cleared') : '⚠️ Not saved. Check Firestore rules.');
+}
+
 // ═══════════════ ADMIN: PRODUCTS ═══════════════
 function buildAdmProducts(){
   const grid=document.getElementById('adm-prod-grid');
@@ -1469,14 +1896,95 @@ function buildAdmProducts(){
       <div class="af"><label>Description</label><textarea id="p-desc-${p.id}">${p.desc}</textarea></div>
       <div class="af-row"><div class="af"><label>Origin</label><input id="p-org-${p.id}" value="${p.origin}"></div><div class="af"><label>Badge</label><input id="p-badge-${p.id}" value="${p.badge}"></div></div>
       <div style="background:#0a1206;border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid #1c2c14">
-        <div style="font-size:.66rem;color:#8a9a7e;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:10px">💰 Prices per size (INR ₹ / USD $)</div>
-        ${sizes.map((s,i)=>`<div class="af-row" style="margin-bottom:7px;align-items:center"><div style="font-size:.74rem;color:#8a9a7e;font-weight:700;padding-top:6px">${s.label}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><input type="number" id="p-inr${i}-${p.id}" value="${s.inr}" placeholder="₹" style="font-size:.78rem;padding:7px 9px"><input type="number" id="p-usd${i}-${p.id}" value="${s.usd}" placeholder="$" style="font-size:.78rem;padding:7px 9px"></div></div>`).join('')}
+        <div style="font-size:.66rem;color:#8a9a7e;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:4px">💰 Sizes &amp; Prices</div>
+        <div style="font-size:.62rem;color:#3a4e32;margin-bottom:10px">Rename a size, or add/remove sizes. Customers pick these on the product card.</div>
+        <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 30px;gap:6px;margin-bottom:5px">
+          <div style="font-size:.58rem;color:#5a6b4e;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Size</div>
+          <div style="font-size:.58rem;color:#5a6b4e;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Price ₹</div>
+          <div style="font-size:.58rem;color:#5a6b4e;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Price $</div>
+          <div></div>
+        </div>
+        <div id="p-sizes-${p.id}">
+        ${sizes.map((s,i)=>`<div class="p-size-row" style="display:grid;grid-template-columns:1.1fr 1fr 1fr 30px;gap:6px;margin-bottom:6px;align-items:center">
+            <input class="p-size-label" value="${s.label}" placeholder="e.g. 2L" style="font-size:.76rem;padding:7px 9px;font-weight:700">
+            <input class="p-size-inr" type="number" value="${s.inr}" placeholder="₹" style="font-size:.76rem;padding:7px 9px">
+            <input class="p-size-usd" type="number" value="${s.usd}" placeholder="$" style="font-size:.76rem;padding:7px 9px">
+            <button onclick="rmSizeRow(this)" title="Remove size" style="background:rgba(184,68,63,.1);border:1px solid #b8443f;color:#e08080;border-radius:6px;cursor:pointer;height:30px;font-size:.8rem;padding:0">✕</button>
+          </div>`).join('')}
+        </div>
+        <button onclick="addSizeRow(${p.id})" style="width:100%;padding:8px;background:rgba(56,102,65,.15);border:1.5px dashed #4d8259;color:#8fb573;border-radius:8px;cursor:pointer;font-size:.74rem;font-weight:700;font-family:'Inter',sans-serif;margin-top:2px">+ Add another size</button>
       </div>
       <div class="af"><label>Stock Quantity</label><input type="number" id="p-qty-${p.id}" value="${p.qty}"></div>
+
+      <div style="background:#0a1206;border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid #1c2c14">
+        <div style="font-size:.66rem;color:#8a9a7e;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:4px">✨ Key Benefits</div>
+        <div style="font-size:.62rem;color:#3a4e32;margin-bottom:10px">Shown in the "View benefits &amp; nutrition" popup. Leave empty to hide the popup link.</div>
+        <div id="p-bens-${p.id}">
+        ${(Array.isArray(p.benefits)?p.benefits:[]).map(b=>`<div class="p-ben-row" style="display:grid;grid-template-columns:1fr 30px;gap:6px;margin-bottom:8px;align-items:start">
+            <div>
+              <input class="p-ben-t" value="${(b.t||'').replace(/"/g,'&quot;')}" placeholder="Benefit title (e.g. Heart Health)" style="font-size:.76rem;padding:7px 9px;font-weight:700;margin-bottom:4px">
+              <input class="p-ben-d" value="${(b.d||'').replace(/"/g,'&quot;')}" placeholder="Short description" style="font-size:.74rem;padding:7px 9px">
+            </div>
+            <button onclick="rmBenRow(this)" title="Remove benefit" style="background:rgba(184,68,63,.1);border:1px solid #b8443f;color:#e08080;border-radius:6px;cursor:pointer;height:30px;font-size:.8rem;padding:0">✕</button>
+          </div>`).join('')}
+        </div>
+        <button onclick="addBenRow(${p.id})" style="width:100%;padding:8px;background:rgba(56,102,65,.15);border:1.5px dashed #4d8259;color:#8fb573;border-radius:8px;cursor:pointer;font-size:.74rem;font-weight:700;font-family:'Inter',sans-serif">+ Add a benefit</button>
+      </div>
+
+      <div style="background:#0a1206;border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid #1c2c14">
+        <div style="font-size:.66rem;color:#8a9a7e;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:10px">🏷️ Label Information</div>
+        <div class="af"><label>Ingredients</label><input id="p-ing-${p.id}" value="${(p.ingredients||'').replace(/"/g,'&quot;')}" placeholder="100% Cold Pressed ..."></div>
+        <div class="af"><label>Storage</label><input id="p-sto-${p.id}" value="${(p.storage||'').replace(/"/g,'&quot;')}" placeholder="Store cool & dry ..."></div>
+        <div class="af" style="margin-bottom:0"><label>Allergy Info</label><input id="p-alg-${p.id}" value="${(p.allergy||'').replace(/"/g,'&quot;')}" placeholder="Contains ..."></div>
+      </div>
+
       <button class="adm-save" onclick="saveProd(${p.id})">💾 Save Product</button>
     </div>`;
   }).join('');
 }
+
+
+// ── Benefit row helpers (admin) ──
+function addBenRow(pid){
+  const wrap = document.getElementById('p-bens-'+pid);
+  if(!wrap) return;
+  const div = document.createElement('div');
+  div.className = 'p-ben-row';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 30px;gap:6px;margin-bottom:8px;align-items:start';
+  div.innerHTML = '<div>'
+    + '<input class="p-ben-t" value="" placeholder="Benefit title (e.g. Heart Health)" style="font-size:.76rem;padding:7px 9px;font-weight:700;margin-bottom:4px">'
+    + '<input class="p-ben-d" value="" placeholder="Short description" style="font-size:.74rem;padding:7px 9px">'
+    + '</div>'
+    + '<button onclick="rmBenRow(this)" title="Remove benefit" style="background:rgba(184,68,63,.1);border:1px solid #b8443f;color:#e08080;border-radius:6px;cursor:pointer;height:30px;font-size:.8rem;padding:0">✕</button>';
+  wrap.appendChild(div);
+  div.querySelector('.p-ben-t').focus();
+}
+function rmBenRow(btn){
+  const row = btn.closest('.p-ben-row');
+  if(row) row.remove();
+}
+
+// ── Size row helpers (admin) ──
+function addSizeRow(pid){
+  const wrap = document.getElementById('p-sizes-'+pid);
+  if(!wrap) return;
+  const div = document.createElement('div');
+  div.className = 'p-size-row';
+  div.style.cssText = 'display:grid;grid-template-columns:1.1fr 1fr 1fr 30px;gap:6px;margin-bottom:6px;align-items:center';
+  div.innerHTML = '<input class="p-size-label" value="" placeholder="e.g. 2L" style="font-size:.76rem;padding:7px 9px;font-weight:700">'
+    + '<input class="p-size-inr" type="number" value="0" placeholder="₹" style="font-size:.76rem;padding:7px 9px">'
+    + '<input class="p-size-usd" type="number" value="0" placeholder="$" style="font-size:.76rem;padding:7px 9px">'
+    + '<button onclick="rmSizeRow(this)" title="Remove size" style="background:rgba(184,68,63,.1);border:1px solid #b8443f;color:#e08080;border-radius:6px;cursor:pointer;height:30px;font-size:.8rem;padding:0">✕</button>';
+  wrap.appendChild(div);
+  div.querySelector('.p-size-label').focus();
+}
+function rmSizeRow(btn){
+  const row = btn.closest('.p-size-row');
+  const wrap = row?.parentElement;
+  if(wrap && wrap.querySelectorAll('.p-size-row').length<=1){ toast('Keep at least one size'); return; }
+  if(row) row.remove();
+}
+
 async function saveProd(id){
   const p = products.find(x=>x.id===id); if(!p) return;
   const g=(pre)=>document.getElementById(pre+id)?.value;
@@ -1485,9 +1993,33 @@ async function saveProd(id){
   p.qty=parseInt(g('p-qty-'))||0;
   const imgs=[]; for(let i=0;i<4;i++){ const v=document.getElementById('p-img'+i+'-'+id)?.value; if(v)imgs.push(v); }
   p.img=imgs[0]||''; p.images=imgs.slice(1);
-  const sizes=getSizes(p);
-  sizes.forEach((s,i)=>{ s.inr=parseFloat(document.getElementById('p-inr'+i+'-'+id)?.value)||0; s.usd=parseFloat(document.getElementById('p-usd'+i+'-'+id)?.value)||0; });
-  p.sizes=sizes;
+  // Read the (editable) size rows
+  const rows = document.querySelectorAll('#p-sizes-'+id+' .p-size-row');
+  const sizes = [];
+  rows.forEach(r=>{
+    const label = (r.querySelector('.p-size-label')?.value||'').trim();
+    if(!label) return;
+    sizes.push({
+      label,
+      inr: parseFloat(r.querySelector('.p-size-inr')?.value)||0,
+      usd: parseFloat(r.querySelector('.p-size-usd')?.value)||0
+    });
+  });
+  if(sizes.length) p.sizes = sizes;
+  // Drop any stale size selection that no longer exists
+  if(selSizes[id] && !sizes.some(s=>s.label===selSizes[id])) delete selSizes[id];
+  // Benefits
+  const bens = [];
+  document.querySelectorAll('#p-bens-'+id+' .p-ben-row').forEach(r=>{
+    const bt=(r.querySelector('.p-ben-t')?.value||'').trim();
+    const bd=(r.querySelector('.p-ben-d')?.value||'').trim();
+    if(bt) bens.push({t:bt, d:bd});
+  });
+  p.benefits = bens;
+  // Label info
+  p.ingredients = document.getElementById('p-ing-'+id)?.value||'';
+  p.storage     = document.getElementById('p-sto-'+id)?.value||'';
+  p.allergy     = document.getElementById('p-alg-'+id)?.value||'';
   renderProducts(); refreshStats();
   const ok=await window.saveProductFB(p);
   toast(ok?'✅ "'+p.name+'" saved — live for all!':'⚠️ Not saved. Check Firestore rules.');
@@ -1495,11 +2027,22 @@ async function saveProd(id){
 async function addProduct(){
   const id=Math.max(...products.map(p=>p.id),0)+1;
   const np={id,name:"New Oil",variety:"",tagline:"",desc:"Describe this product.",origin:"India",badge:"New",emoji:"🫙",img:"",images:[],
-    sizes:[{label:"250ml",inr:0,usd:0},{label:"500ml",inr:0,usd:0},{label:"1L",inr:0,usd:0},{label:"5L",inr:0,usd:0}],qty:0,
+    sizes:[{label:"500ml",inr:0,usd:0},{label:"1L",inr:0,usd:0},{label:"5L",inr:0,usd:0}],qty:0,
     benefits:[],ingredients:"",storage:"",allergy:""};
   products.push(np); buildAdmProducts(); renderProducts();
   await window.saveProductFB(np);
-  toast('+ Product added — edit it below');
+  // Jump to the new card so it's obvious where to edit
+  const cards = document.querySelectorAll('#adm-prod-grid .adm-card');
+  const last = cards[cards.length-1];
+  if(last){
+    last.scrollIntoView({behavior:'smooth', block:'center'});
+    last.style.transition='box-shadow .4s';
+    last.style.boxShadow='0 0 0 2px #4d8259';
+    setTimeout(()=>{ last.style.boxShadow=''; }, 2200);
+    const nameInput = document.getElementById('p-name-'+id);
+    if(nameInput){ nameInput.focus(); nameInput.select(); }
+  }
+  toast('+ Product #'+products.length+' added — fill in its details');
 }
 async function delProduct(id){
   if(!confirm('Delete this product?'))return;
@@ -1649,6 +2192,165 @@ async function saveB2B(){
   toast(ok?'✅ Wholesale images saved!':'⚠️ Check rules.');
 }
 
+
+// ═══════════════ ADMIN: SALES & ORDERS ═══════════════
+let orders = [];
+let ordersLoaded = false;
+
+async function loadSales(){
+  const body = document.getElementById('sales-body');
+  if(body) body.innerHTML = '<div class="adm-info">Loading sales…</div>';
+  const res = await window.loadOrdersFB();
+  if(res===null){
+    if(body) body.innerHTML = '<div class="adm-info" style="color:#e08080">Could not load orders.<br>Check the Firestore rules for the <strong>orders</strong> collection (see Overview).</div>';
+    return;
+  }
+  orders = res;
+  ordersLoaded = true;
+  refreshStats();
+  renderSales();
+}
+
+function salesInRange(){
+  const days = parseInt(document.getElementById('sales-range')?.value ?? '30');
+  if(!days) return orders.slice();
+  const cutoff = Date.now() - days*86400000;
+  return orders.filter(o => (o.ts||0) >= cutoff);
+}
+
+function renderSales(){
+  const body = document.getElementById('sales-body');
+  if(!body) return;
+  if(!ordersLoaded){ loadSales(); return; }
+
+  const list = salesInRange();
+  // Revenue is kept per currency — INR and USD are separate prices, never summed
+  const inr = list.filter(o=>o.currency==='INR');
+  const usd = list.filter(o=>o.currency==='USD');
+  const sum = a => a.reduce((s,o)=>s+(o.total||0),0);
+  const totInr = sum(inr), totUsd = sum(usd);
+  const avgInr = inr.length ? totInr/inr.length : 0;
+  const avgUsd = usd.length ? totUsd/usd.length : 0;
+  const units = list.reduce((s,o)=>s+(Array.isArray(o.items)?o.items.reduce((n,i)=>n+(i.qty||0),0):0),0);
+  const pending = list.filter(o=>o.status!=='done').length;
+
+  if(!orders.length){
+    body.innerHTML = '<div class="adm-info">No orders yet. Once a customer pays, the order appears here automatically.</div>';
+    return;
+  }
+
+  // ── Totals ──
+  let h = '<div class="adm-stats" style="grid-template-columns:repeat(4,1fr)">'
+    + '<div class="adm-stat"><div class="sn">₹'+Math.round(totInr).toLocaleString('en-IN')+'</div><div class="sl">Revenue (INR)</div></div>'
+    + '<div class="adm-stat"><div class="sn">$'+totUsd.toFixed(2)+'</div><div class="sl">Revenue (USD)</div></div>'
+    + '<div class="adm-stat"><div class="sn">'+list.length+'</div><div class="sl">Orders</div></div>'
+    + '<div class="adm-stat"><div class="sn">'+units+'</div><div class="sl">Bottles Sold</div></div>'
+    + '</div>';
+  h += '<div class="adm-stats" style="grid-template-columns:repeat(3,1fr)">'
+    + '<div class="adm-stat"><div class="sn" style="font-size:1.4rem">₹'+Math.round(avgInr).toLocaleString('en-IN')+'</div><div class="sl">Avg Order (INR)</div></div>'
+    + '<div class="adm-stat"><div class="sn" style="font-size:1.4rem">$'+avgUsd.toFixed(2)+'</div><div class="sl">Avg Order (USD)</div></div>'
+    + '<div class="adm-stat"><div class="sn" style="font-size:1.4rem">'+pending+'</div><div class="sl">To Fulfil</div></div>'
+    + '</div>';
+
+  // ── Daily chart (INR, since that's the main market) ──
+  const days = parseInt(document.getElementById('sales-range')?.value ?? '30') || 30;
+  const nBars = Math.min(days, 30);
+  const buckets = [];
+  for(let i=nBars-1;i>=0;i--){
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i);
+    const start = d.getTime(), end = start+86400000;
+    const dayOrders = list.filter(o=>o.ts>=start && o.ts<end);
+    buckets.push({
+      label: d.toLocaleDateString(undefined,{day:'numeric',month:'short'}),
+      inr: dayOrders.filter(o=>o.currency==='INR').reduce((s,o)=>s+(o.total||0),0),
+      n: dayOrders.length
+    });
+  }
+  const peak = Math.max(...buckets.map(b=>b.inr), 1);
+  h += '<div class="adm-box"><div class="adm-box-t">Daily Revenue (INR) · last '+nBars+' days</div><div class="sales-chart">'
+    + buckets.map(b=>{
+        const pct = Math.round((b.inr/peak)*100);
+        const title = b.label+' — ₹'+Math.round(b.inr).toLocaleString('en-IN')+' · '+b.n+' order'+(b.n===1?'':'s');
+        return '<div class="sbar-wrap"><div class="sbar" style="height:'+Math.max(pct,1)+'%" title="'+title+'"></div>'
+             + '<div class="sbar-lbl">'+(nBars<=14 ? b.label.split(' ')[0] : '')+'</div></div>';
+      }).join('')
+    + '</div><div style="font-size:.66rem;color:#3a4e32;margin-top:8px">Hover a bar for that day\'s total. Peak: ₹'+Math.round(peak).toLocaleString('en-IN')+'</div></div>';
+
+  // ── Top products ──
+  const tally = {};
+  list.forEach(o=>(o.items||[]).forEach(i=>{ tally[i.name]=(tally[i.name]||0)+(i.qty||0); }));
+  const top = Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  if(top.length){
+    const most = top[0][1];
+    h += '<div class="adm-box"><div class="adm-box-t">Best Sellers</div>'
+      + top.map(([n,q])=>'<div style="margin-bottom:9px">'
+          + '<div style="display:flex;justify-content:space-between;font-size:.8rem;color:#8a9a7e;margin-bottom:4px"><span>'+n+'</span><span style="font-weight:700;color:var(--gold-l)">'+q+'</span></div>'
+          + '<div style="height:5px;background:#0a1206;border-radius:3px;overflow:hidden"><div style="height:100%;width:'+Math.round(q/most*100)+'%;background:linear-gradient(90deg,#4d8259,#c9922e);border-radius:3px"></div></div>'
+          + '</div>').join('')
+      + '</div>';
+  }
+
+  // ── Order history ──
+  h += '<div class="adm-h" style="font-size:1.05rem;margin-top:24px">🧾 Order History <span style="font-size:.7rem;color:#3a4e32;font-family:Inter,sans-serif;font-weight:400">('+list.length+')</span></div>';
+  h += list.map(o=>{
+    const d = o.ts ? new Date(o.ts).toLocaleString() : '';
+    const cu = o.customer||{};
+    const items = (o.items||[]).map(i=>'• '+i.name+' × '+i.qty+' — '+money(i.line, o.currency)).join('<br>');
+    const done = o.status==='done';
+    return '<div class="ord">'
+      + '<div class="ord-top">'
+        + '<div><div class="ord-cust">'+(cu.name||'Customer')+'</div>'
+        + '<div class="ord-meta">'+d+(o.paymentId?' · '+o.paymentId:'')+'</div></div>'
+        + '<div style="text-align:right">'
+          + '<div class="ord-total">'+money(o.total||0, o.currency)+'</div>'
+          + '<button class="ord-status '+(done?'done':'new')+'" onclick="toggleOrder(\''+o._id+'\','+(!done)+')">'+(done?'✓ Fulfilled':'Pending')+'</button>'
+        + '</div>'
+      + '</div>'
+      + '<div class="ord-items">'+items
+        + '<div style="color:#3a4e32;margin-top:7px;font-size:.74rem">Subtotal '+money(o.subtotal||0,o.currency)
+        + (o.discount?' · Discount −'+money(o.discount,o.currency)+(o.coupon?' ('+o.coupon+')':''):'')
+        + ' · Delivery '+((o.delivery||0)===0?'FREE':money(o.delivery,o.currency))+'</div>'
+      + '</div>'
+      + '<div class="ord-addr">📞 '+(cu.phone||'—')+' · ✉️ '+(cu.email||'—')+'<br>📍 '+(cu.address||'—')+', '+(cu.city||'')+' '+(cu.pin||'')
+      + (cu.notes?'<br>📝 '+cu.notes:'')+'</div>'
+      + '</div>';
+  }).join('') || '<div class="adm-info">No orders in this period.</div>';
+
+  body.innerHTML = h;
+}
+
+async function toggleOrder(docId, done){
+  const o = orders.find(x=>x._id===docId);
+  if(o){ o.status = done?'done':'new'; renderSales(); }
+  const ok = await window.updateOrderFB(docId, {status: done?'done':'new'});
+  toast(ok ? (done?'✓ Marked fulfilled':'↺ Marked pending') : '⚠️ Could not update');
+}
+
+function exportSalesCSV(){
+  const list = salesInRange();
+  if(!list.length){ toast('No orders to export'); return; }
+  const esc = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const rows = [['Date','Payment ID','Name','Phone','Email','Address','City','PIN','Items','Currency','Subtotal','Discount','Coupon','Delivery','Total','Status']];
+  list.forEach(o=>{
+    const cu=o.customer||{};
+    rows.push([
+      o.ts?new Date(o.ts).toLocaleString():'', o.paymentId||'',
+      cu.name||'', cu.phone||'', cu.email||'', cu.address||'', cu.city||'', cu.pin||'',
+      (o.items||[]).map(i=>i.name+' x'+i.qty).join('; '),
+      o.currency||'', o.subtotal||0, o.discount||0, o.coupon||'', o.delivery||0, o.total||0,
+      o.status==='done'?'Fulfilled':'Pending'
+    ]);
+  });
+  const csv = rows.map(r=>r.map(esc).join(',')).join('\n');
+  const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sunsa-sales-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('⭳ Exported '+list.length+' orders');
+}
+
 // ═══════════════ ADMIN: INQUIRIES ═══════════════
 function buildInquiries(){
   const list=document.getElementById('adm-inq-list');
@@ -1707,6 +2409,10 @@ function loadCache(){
     if(b) branding = {...branding, ...JSON.parse(b)};
   }catch(e){}
   try{
+    const h = localStorage.getItem('sunsa_hero');
+    if(h){ const d=JSON.parse(h); if(d&&Array.isArray(d.images)) heroImages=d.images; }
+  }catch(e){}
+  try{
     const w = localStorage.getItem('sunsa_b2b');
     if(w){ const d=JSON.parse(w); if(d&&Array.isArray(d.images)) b2bImages=d.images; }
   }catch(e){}
@@ -1722,6 +2428,7 @@ function loadCache(){
 
   applyBranding();
   renderTicker();
+  renderHero();
   renderProducts();
   renderCombos();
   renderB2BGallery();
