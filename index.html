@@ -51,6 +51,14 @@ db.collection('combos').onSnapshot(snap=>{
     try{localStorage.setItem('sunsa_combos', JSON.stringify(arr));}catch(e){}
   }
 });
+
+  db.collection('gifts').onSnapshot(snap=>{
+  if(!snap.empty){
+    const arr = snap.docs.map(d=>({...d.data(), id:Number(d.data().id||d.id)})).sort((a,b)=>a.id-b.id);
+    if(window.__setGifts) window.__setGifts(arr);
+    try{localStorage.setItem('sunsa_gifts', JSON.stringify(arr));}catch(e){}
+  }
+});
 db.collection('settings').onSnapshot(snap=>{
   snap.forEach(doc=>{
     if(doc.id==='store' && window.__setStore) window.__setStore(doc.data());
@@ -90,39 +98,65 @@ window.updateStockFB = async function(id, qty){
   try{ await db.collection('products').doc(String(id)).update({qty:qty}); return true; }
   catch(e){ console.error('stock update blocked', e); return false; }
 };
+window.deleteGiftFB = async function(id){ try{ await db.collection('gifts').doc(String(id)).delete(); return true;}catch(e){return false;} };
+window.saveSettingFB = async function(docId, data){ try{ await db.collection('settings').doc(docId).set(cleanObj(data)); return true;}catch(e){console.error('save setting',e);return false;} };
+window.saveOrderFB = async function(data){ try{ await db.collection('orders').add(data); return true;}catch(e){console.error('save order',e);return false;} };
+window.loadOrdersFB = async function(){ try{ const s = await db.collection('orders').orderBy('ts','desc').limit(300).get(); return s.docs.map(d=>({_id:d.id, ...d.data()})); }catch(e){ console.error('load orders',e); return null; } };
+window.updateOrderFB = async function(docId, patch){ try{ await db.collection('orders').doc(docId).update(patch); return true;}catch(e){return false;} };
+window.updateStockFB = async function(id, qty){
+  // Writes only the qty field, so the Firestore rule can allow an unauthenticated decrement
+  try{ await db.collection('products').doc(String(id)).update({qty:qty}); return true; }
+  catch(e){ console.error('stock update blocked', e); return false; }
+};
+window.saveGiftFB = async function(o){ try{ await db.collection('gifts').doc(String(o.id)).set(cleanObj(o)); return true;}catch(e){console.error('save combo',e);return false;} };
+window.deleteComboFB = async function(id){ try{ await db.collection('gifts').doc(String(id)).delete(); return true;}catch(e){return false;} };
+window.saveSettingFB = async function(docId, data){ try{ await db.collection('settings').doc(docId).set(cleanObj(data)); return true;}catch(e){console.error('save setting',e);return false;} };
+window.saveOrderFB = async function(data){ try{ await db.collection('orders').add(data); return true;}catch(e){console.error('save order',e);return false;} };
+window.loadOrdersFB = async function(){ try{ const s = await db.collection('orders').orderBy('ts','desc').limit(300).get(); return s.docs.map(d=>({_id:d.id, ...d.data()})); }catch(e){ console.error('load orders',e); return null; } };
+window.updateOrderFB = async function(docId, patch){ try{ await db.collection('orders').doc(docId).update(patch); return true;}catch(e){return false;} };
+window.updateStockFB = async function(id, qty){
+  // Writes only the qty field, so the Firestore rule can allow an unauthenticated decrement
+  try{ await db.collection('products').doc(String(id)).update({qty:qty}); return true; }
+  catch(e){ console.error('stock update blocked', e); return false; }
+};
 window.saveInquiryFB = async function(data){ try{ await db.collection('inquiries').add({...data, ts:Date.now()}); return true;}catch(e){console.error('save inquiry',e);return false;} };
 
-window.seedIfEmpty = async function(prods, combosArr){
+window.seedIfEmpty = async function(prods, combosArr, giftsArr){
   try{
     const p = await db.collection('products').get();
     if(p.empty){ const b=db.batch(); prods.forEach(x=>b.set(db.collection('products').doc(String(x.id)),cleanObj(x))); await b.commit(); }
     const cm = await db.collection('combos').get();
     if(cm.empty && combosArr){ const b=db.batch(); combosArr.forEach(x=>b.set(db.collection('combos').doc(String(x.id)),cleanObj(x))); await b.commit(); }
+    const gf = await db.collection('gifts').get();
+    if(gf.empty && giftsArr){ const b=db.batch(); giftsArr.forEach(x=>b.set(db.collection('gifts').doc(String(x.id)),cleanObj(x))); await b.commit(); }
   }catch(e){ console.error('seed',e); }
 };
 </script>
 <style>
 :root{
-  --head:#3a5a40;        /* static header green — client spec, unchanged */
-  --cream:#faedcd;       /* main website bg — client spec, unchanged */
-  --cream-deep:#f4e6c6;
-  --forest:#3a5a40;      /* green now used as an accent, not the base */
-  --forest-d:#2a4d31;
+  /* ══ PALETTE — taken from the logo, sampled pixel by pixel ══
+     Logo cream  #efe5c2 · Logo gold #d7a52a · Logo green #365b3e
+     Client spec: header #386641, body #faedcd — both kept, and the
+     logo's green (#365b3e) is within a hair of the spec'd #386641. */
+  --head:#386641;        /* client spec — matches the logo's leaves */
+  --cream:#faedcd;       /* client spec — matches the logo background */
+  --cream-deep:#f2e4bd;
+  --gold:#d7a52a;        /* THE logo gold — sun & droplet */
+  --gold-d:#bd8f1f;      /* pressed/hover */
+  --gold-t:#7f5f1d;      /* gold dark enough to be TEXT on cream (AA) */
+  --forest:#386641;
+  --forest-d:#2b4432;
   --forest-l:#4d8259;
-  --gold:#b0862f;        /* muted, less brassy — decorative use */
-  --gold-t:#7f5f1d;      /* darker gold for TEXT on cream (WCAG AA) */
-  --gold-l:#cfa350;
-  --amber:#9c6b32;
-  --ink:#22241d;         /* deep warm charcoal — carries headings now */
-  --ink-2:#3a3d33;
-  --ink-soft:#5f5e50;    /* warm grey for body copy (WCAG AA on cream) */
+  --ink:#243a2a;         /* deepest logo green — headings, AAA on cream */
+  --ink-2:#2f4a35;
+  --ink-soft:#4e5c47;    /* body copy — AA on cream */
   --paper:#fffdf7;
-  --char:#1e211a;        /* dark section background (was forest green) */
-  --char-2:#171a14;
-  --line:rgba(34,36,29,.12);
-  --line-w:rgba(255,253,247,.12);
+  --char:#243a2a;        /* dark sections — the logo green, not black */
+  --char-2:#1b2c20;
+  --line:rgba(36,58,42,.14);
+  --line-w:rgba(250,237,205,.12);
   --red:#a8443f;
-  --shadow:rgba(34,36,29,.10);
+  --shadow:rgba(36,58,42,.10);
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;scroll-padding-top:70px;}
@@ -187,7 +221,7 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
   font-size:.78rem;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:8px;
   transition:all .25s;letter-spacing:.02em;}
 .cart-toggle:hover{background:rgba(250,237,205,.1);border-color:rgba(250,237,205,.5);}
-.cart-badge{background:var(--gold-l);color:var(--char);border-radius:50%;min-width:18px;height:18px;font-size:.64rem;
+.cart-badge{background:var(--gold);color:var(--ink);border-radius:50%;min-width:18px;height:18px;font-size:.64rem;
   display:inline-flex;align-items:center;justify-content:center;font-weight:700;padding:0 5px;}
 .menu-btn{display:none;background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;}
 
@@ -218,10 +252,10 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .hero h1 em{font-style:italic;color:var(--gold-t);}
 .hero-sub{font-size:1.05rem;color:var(--ink-soft);line-height:1.75;max-width:460px;margin-bottom:34px;}
 .hero-cta{display:flex;gap:14px;flex-wrap:wrap;}
-.btn-primary{padding:15px 32px;background:var(--ink);color:var(--cream);border:none;border-radius:40px;
-  font-size:.88rem;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.03em;
-  box-shadow:0 6px 20px rgba(34,36,29,.2);transition:all .28s;}
-.btn-primary:hover{background:var(--char);transform:translateY(-2px);box-shadow:0 12px 28px rgba(34,36,29,.28);}
+.btn-primary{padding:15px 32px;background:var(--gold);color:var(--ink);border:none;border-radius:40px;
+  font-size:.88rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.03em;
+  box-shadow:0 6px 20px rgba(215,165,42,.35);transition:all .28s;}
+.btn-primary:hover{background:var(--gold-d);transform:translateY(-2px);box-shadow:0 12px 28px rgba(215,165,42,.45);}
 .btn-ghost{padding:15px 32px;background:transparent;color:var(--ink);border:1px solid rgba(34,36,29,.28);border-radius:40px;
   font-size:.88rem;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.03em;transition:all .28s;}
 .btn-ghost:hover{border-color:var(--ink);background:rgba(34,36,29,.04);transform:translateY(-2px);}
@@ -297,7 +331,7 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .prod-noimg{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:rgba(34,36,29,.22);}
 .prod-noimg span{font-size:3rem;}
 .prod-noimg small{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;}
-.prod-badge{position:absolute;top:14px;left:14px;background:rgba(34,36,29,.82);backdrop-filter:blur(6px);color:var(--cream);font-size:.56rem;font-weight:600;
+.prod-badge{position:absolute;top:14px;left:14px;background:rgba(36,58,42,.85);backdrop-filter:blur(6px);color:var(--cream);font-size:.56rem;font-weight:600;
   padding:5px 12px;border-radius:30px;letter-spacing:.1em;text-transform:uppercase;}
 .prod-thumbs{display:flex;gap:7px;padding:12px 20px 0;flex-wrap:wrap;}
 .prod-thumb{width:44px;height:44px;border-radius:10px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:border-color .2s;opacity:.7;}
@@ -319,11 +353,13 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .prod-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;}
 .prod-price{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:500;color:var(--ink);line-height:1;letter-spacing:-.01em;}
 .prod-price small{font-size:.66rem;color:var(--ink-soft);font-weight:400;display:block;font-family:'Inter',sans-serif;margin-top:3px;}
-.add-btn{padding:10px 18px;background:var(--ink);color:var(--cream);border:none;border-radius:26px;font-size:.76rem;font-weight:500;
-  cursor:pointer;font-family:'Inter',sans-serif;transition:all .25s;letter-spacing:.03em;white-space:nowrap;}
-.add-btn:hover{background:var(--char);transform:translateY(-2px);}
+.add-btn{padding:11px 22px;background:var(--gold);color:var(--ink);border:none;border-radius:26px;font-size:.78rem;font-weight:700;
+  cursor:pointer;font-family:'Inter',sans-serif;transition:all .25s;letter-spacing:.03em;white-space:nowrap;
+  box-shadow:0 4px 14px rgba(215,165,42,.35);}
+.add-btn:hover{background:var(--gold-d);transform:translateY(-2px);box-shadow:0 8px 22px rgba(215,165,42,.45);}
+.add-btn:disabled{background:#c9c2b0;color:#fff;cursor:not-allowed;box-shadow:none;transform:none;}
 .prod-card.oos{opacity:.6;}
-.prod-card.oos .add-btn{background:#bbb;box-shadow:none;cursor:not-allowed;}
+.prod-card.oos .add-btn{background:#9aa094;box-shadow:none;cursor:not-allowed;}
 
 /* ═══════════ PROCESS (How It's Made) ═══════════ */
 #process{background:var(--char);color:var(--cream);position:relative;overflow:hidden;}
@@ -338,6 +374,43 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .pstep-icon{font-size:2rem;margin-bottom:12px;}
 .pstep h3{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:500;color:var(--cream);margin-bottom:8px;}
 .pstep p{font-size:.83rem;color:rgba(250,237,205,.6);line-height:1.65;}
+
+
+/* ═══════════ GIFTING ═══════════ */
+#gifting{background:var(--cream-deep);border-top:1px solid var(--line);}
+.gift-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;max-width:1300px;margin:0 auto;}
+.gift-card{background:var(--paper);border:1px solid var(--line);border-radius:22px;overflow:hidden;
+  display:flex;flex-direction:column;transition:transform .3s,box-shadow .3s;box-shadow:0 6px 24px var(--shadow);}
+.gift-card:hover{transform:translateY(-5px);box-shadow:0 18px 44px var(--shadow);}
+.gift-media{height:180px;background:linear-gradient(135deg,rgba(215,165,42,.09),rgba(56,102,65,.05));
+  position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.gift-media img{width:100%;height:100%;object-fit:cover;}
+.gift-noimg{font-size:2.6rem;opacity:.5;}
+.gift-ribbon{position:absolute;top:13px;right:13px;background:var(--gold);color:var(--ink);font-size:.58rem;
+  font-weight:700;padding:5px 12px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;}
+.gift-tag{position:absolute;bottom:12px;left:12px;background:rgba(30,33,26,.85);color:var(--cream);
+  font-size:.58rem;font-weight:600;padding:5px 12px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;}
+.gift-body{padding:22px;display:flex;flex-direction:column;flex:1;}
+.gift-name{font-family:'Fraunces',serif;font-size:1.3rem;font-weight:500;color:var(--ink);margin-bottom:6px;letter-spacing:-.01em;}
+.gift-desc{font-size:.83rem;color:var(--ink-soft);line-height:1.6;margin-bottom:14px;}
+.gift-items{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.gift-item{font-size:.76rem;color:var(--ink-soft);display:flex;align-items:flex-start;gap:7px;}
+.gift-item::before{content:'—';color:var(--gold-t);flex-shrink:0;}
+.gift-foot{margin-top:auto;}
+.gift-price{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:500;color:var(--ink);letter-spacing:-.01em;
+  display:flex;align-items:baseline;gap:9px;margin-bottom:12px;flex-wrap:wrap;}
+.gift-orig{font-size:.86rem;color:#a89d86;text-decoration:line-through;font-family:'Inter',sans-serif;font-weight:400;}
+.gift-save{font-size:.62rem;background:rgba(215,165,42,.16);color:var(--gold-t);font-weight:700;
+  padding:3px 9px;border-radius:20px;letter-spacing:.04em;font-family:'Inter',sans-serif;}
+.gift-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.gift-actions .cart-btn{border-radius:14px;padding:12px 10px;}
+.gift-buy{padding:12px;background:var(--gold);color:var(--ink);border:none;border-radius:14px;font-size:.82rem;
+  font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.03em;transition:all .25s;}
+.gift-buy:hover{background:var(--gold-d);transform:translateY(-2px);}
+.gift-enq{grid-column:1/-1;padding:12px;background:var(--ink);color:var(--cream);border:none;border-radius:14px;
+  font-size:.82rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.03em;transition:all .25s;}
+.gift-enq:hover{background:var(--char);transform:translateY(-2px);}
+@media(max-width:420px){.gift-actions{grid-template-columns:1fr;}}
 
 /* ═══════════ WHY ═══════════ */
 #why{background:var(--cream);}
@@ -367,13 +440,13 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .cmp-brand{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:500;color:var(--ink);line-height:1.15;}
 .cmp-brand small{display:block;font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-t);margin-top:4px;}
 .cmp-other{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:#9a8f7a;line-height:1.15;}
-.cmp-other small{display:block;font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#b8a88c;margin-top:4px;}
+.cmp-other small{display:block;font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#9aa094;margin-top:4px;}
 .cmp-val{font-size:.83rem;line-height:1.5;display:flex;align-items:flex-start;gap:8px;}
 .cmp-val .ic{flex-shrink:0;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;margin-top:1px;}
 .cmp-us .cmp-val{color:var(--ink);}
 .cmp-us .ic{background:var(--forest);color:#fff;}
-.cmp-them .cmp-val{color:#8a8172;}
-.cmp-them .ic{background:#ded3bd;color:#8a7a5e;}
+.cmp-them .cmp-val{color:#7d8377;}
+.cmp-them .ic{background:#dcd7c2;color:#6f7568;}
 .cmp-note{font-size:.72rem;color:var(--ink-soft);line-height:1.6;margin-top:16px;text-align:center;max-width:640px;margin-left:auto;margin-right:auto;}
 @media(max-width:760px){
   .cmp-row{grid-template-columns:1fr;}
@@ -382,7 +455,25 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
   .cmp-us{border-left:none;border-right:none;border-bottom:1px solid var(--line);}
   .cmp-row.head{display:none;}
   .cmp-us .cmp-val::after{content:' — Sunsa';font-size:.62rem;color:var(--gold);font-weight:700;letter-spacing:.06em;}
-  .cmp-them .cmp-val::after{content:' — Refined oils';font-size:.62rem;color:#b8a88c;font-weight:700;letter-spacing:.06em;}
+  .cmp-them .cmp-val::after{content:' — Refined oils';font-size:.62rem;color:#9aa094;font-weight:700;letter-spacing:.06em;}
+}
+
+
+
+
+/* Add to Cart + Buy Now side by side */
+.prod-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.cart-btn{padding:11px 12px;background:transparent;color:var(--ink);border:1.5px solid rgba(34,36,29,.25);
+  border-radius:26px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+  letter-spacing:.02em;transition:all .25s;white-space:nowrap;}
+.cart-btn:hover{border-color:var(--ink);background:rgba(34,36,29,.05);transform:translateY(-2px);}
+.cart-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;border-color:rgba(34,36,29,.15);}
+.prod-actions .add-btn{width:100%;padding:11px 12px;}
+.combo-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.combo-actions .cart-btn{border-radius:14px;padding:12px 10px;}
+.combo-actions .combo-buy{border-radius:14px;}
+@media(max-width:420px){
+  .prod-actions,.combo-actions{grid-template-columns:1fr;}
 }
 
 /* ═══════════ COMBOS ═══════════ */
@@ -409,9 +500,9 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .combo-orig{font-size:.85rem;color:#aaa;text-decoration:line-through;}
 .combo-save{background:rgba(201,146,46,.15);border:1px solid rgba(201,146,46,.35);color:var(--amber);font-size:.64rem;
   font-weight:800;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;}
-.combo-buy{width:100%;padding:12px;background:var(--ink);color:var(--cream);border:none;border-radius:14px;font-size:.8rem;
-  font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.03em;transition:all .25s;}
-.combo-buy:hover{background:var(--char);transform:translateY(-2px);}
+.combo-buy{width:100%;padding:12px;background:var(--gold);color:var(--ink);border:none;border-radius:14px;font-size:.82rem;
+  font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.03em;transition:all .25s;}
+.combo-buy:hover{background:var(--gold-d);transform:translateY(-2px);}
 
 /* ═══════════ B2B / WHOLESALE ═══════════ */
 #wholesale{background:var(--cream-deep);color:var(--ink);position:relative;overflow:hidden;
@@ -499,7 +590,7 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
 .citem-qty{display:flex;align-items:center;gap:8px;margin-top:5px;}
 .qty-btn{width:24px;height:24px;border-radius:7px;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-size:.9rem;color:var(--ink);display:flex;align-items:center;justify-content:center;}
 .citem-price{font-size:.88rem;font-weight:600;color:var(--ink);white-space:nowrap;}
-.citem-rm{background:none;border:none;color:#ccc;font-size:1rem;cursor:pointer;padding:4px;}
+.citem-rm{background:none;border:none;color:#9aa094;font-size:1rem;cursor:pointer;padding:4px;}
 .citem-rm:hover{color:var(--red);}
 .cart-empty{text-align:center;padding:70px 20px;color:#bbb;}
 .cart-empty span{font-size:3.2rem;display:block;margin-bottom:14px;opacity:.5;}
@@ -515,8 +606,8 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
 .csum-row{display:flex;justify-content:space-between;font-size:.85rem;color:var(--ink-soft);padding:4px 0;}
 .csum-row span:last-child{font-weight:600;color:var(--ink);}
 .cart-total{display:flex;justify-content:space-between;align-items:center;font-family:'Fraunces',serif;font-size:1.35rem;font-weight:500;color:var(--ink);margin-bottom:16px;padding-top:12px;border-top:1px solid var(--line);}
-.checkout-btn{width:100%;padding:16px;background:var(--ink);color:var(--cream);border:none;border-radius:14px;font-size:.88rem;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.04em;transition:all .25s;}
-.checkout-btn:hover{background:var(--char);transform:translateY(-2px);}
+.checkout-btn{width:100%;padding:16px;background:var(--gold);color:var(--ink);border:none;border-radius:14px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.03em;transition:all .25s;box-shadow:0 6px 20px rgba(215,165,42,.4);}
+.checkout-btn:hover{background:var(--gold-d);transform:translateY(-2px);box-shadow:0 10px 26px rgba(215,165,42,.5);}
 .cart-secure{text-align:center;font-size:.64rem;color:var(--ink-soft);margin-top:10px;}
 </style>
 <style>
@@ -811,6 +902,17 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
   </div>
   <div class="combo-grid" id="combo-grid"></div>
 </section>
+
+<!-- GIFTING -->
+<section class="section" id="gifting">
+  <div class="sec-head center reveal">
+    <div class="eyebrow"><span class="line"></span><span>Gifting</span></div>
+    <h2 class="sec-title">Give Something <em>Good</em></h2>
+    <p class="sec-sub">Presentation boxes and hampers — for festivals, housewarmings, and people who cook.</p>
+  </div>
+  <div class="gift-grid" id="gift-grid"></div>
+</section>
+
 <!-- PROCESS -->
 <section class="section" id="process">
   <div class="sec-head center reveal">
@@ -941,6 +1043,7 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
     </div>
   </div>
 </section>
+
 <!-- CONTACT / ORDER -->
 <section class="section" id="contact">
   <div class="contact-layout">
@@ -1123,6 +1226,7 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
       <div class="adm-side-sec">Catalog</div>
       <div class="adm-nav" id="nav-products" onclick="admTab('products')"><span class="ni">🫙</span> Products</div>
       <div class="adm-nav" id="nav-combos" onclick="admTab('combos')"><span class="ni">🎁</span> Combos & Offers</div>
+      <div class="adm-nav" id="nav-gifts" onclick="admTab('gifts')"><span class="ni">🎀</span> Gifting</div>
       <div class="adm-side-sec">Sales</div>
       <div class="adm-nav" id="nav-sales" onclick="admTab('sales')"><span class="ni">📈</span> Sales &amp; Orders</div>
       <div class="adm-side-sec">Store</div>
@@ -1262,6 +1366,18 @@ service cloud.firestore {
         </div>
         <div class="adm-grid" id="adm-combo-grid"></div>
       </div>
+      <!-- GIFTS -->
+      <div class="adm-tab" id="tab-gifts">
+        <div class="adm-h">🎀 Gifting <button class="adm-add" onclick="addGift()">+ Add Gift Box</button></div>
+        <div class="adm-info" style="margin-bottom:14px">
+          Gift boxes and hampers, shown in their own section under Combos. Works exactly like Combos — add as many as you like.<br>
+          Tick <strong style="color:#8a9a7e">Price on enquiry</strong> for items like corporate gifting where the price depends on the order — the buttons become an enquiry button instead.<br>
+          <span class="tip">The three boxes below are starters I've written. Replace the names, contents and prices with your client's real gift range.</span>
+        </div>
+        <div class="adm-grid" id="adm-gift-grid"></div>
+        <button class="adm-save sec" style="margin-top:16px;max-width:260px" onclick="resetGifts()">↺ Reset to defaults</button>
+      </div>
+
       <!-- SALES -->
       <div class="adm-tab" id="tab-sales">
         <div class="adm-h">📈 Sales &amp; Orders</div>
@@ -1313,6 +1429,7 @@ service cloud.firestore {
         <div class="adm-box" id="b2b-img-inputs"></div>
         <button class="adm-save" onclick="saveB2B(this)">💾 Save Wholesale Images</button>
       </div>
+
       <!-- POLICIES -->
       <div class="adm-tab" id="tab-policies">
         <div class="adm-h">📜 Policies</div>
@@ -1400,6 +1517,16 @@ let products = [
 
 const DEFAULT_PRODUCTS = JSON.parse(JSON.stringify(products));
 
+let gifts = [
+  {id:1, name:"Festive Gift Box", tag:"Most Gifted", ribbon:"", desc:"Three of our most-loved oils in a presentation box with a handwritten note card.",
+   items:["Groundnut Oil 500ml","Coconut Oil 500ml","Sesame Oil 500ml"], img:"", inr:1250, usd:42, origInr:1400, origUsd:47, active:true, enquire:false},
+  {id:2, name:"Housewarming Hamper", tag:"", ribbon:"", desc:"A generous starter set for a new kitchen — five oils, one box.",
+   items:["Groundnut 1L","Sunflower 1L","Coconut 500ml","Sesame 500ml","Mustard 500ml"], img:"", inr:2400, usd:80, origInr:2700, origUsd:90, active:true, enquire:false},
+  {id:3, name:"Corporate Gifting", tag:"Bulk", ribbon:"", desc:"Custom-branded boxes for staff and clients. Minimum 25 boxes — enquire for pricing.",
+   items:["Your choice of oils","Custom branding","Personalised note card"], img:"", inr:0, usd:0, origInr:0, origUsd:0, active:true, enquire:true},
+];
+const DEFAULT_GIFTS = JSON.parse(JSON.stringify(gifts));
+
 let combos = [
   {id:1,active:true,name:"Starter Triple Pack",ribbon:"Best Value",tag:"Seasonal Combo",
    desc:"Three of our most popular oils in one bundle — perfect intro to cold pressing.",
@@ -1440,6 +1567,20 @@ let heroTimer = null;
 let inquiries = [];
 
 const SYM = {INR:'₹', USD:'$'};
+
+// ── Escaping ─────────────────────────────────────────────────────────────
+// Anything a stranger can type (enquiries, checkout details) is rendered in
+// the admin panel. Without this, a submitted name like <img src=x onerror=…>
+// executes in the admin's logged-in session. esc() for text, escA() for
+// anything going inside an HTML attribute.
+function esc(v){
+  return String(v==null?'':v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escA(v){
+  return esc(v).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function money(v, cur){ cur=cur||currency; if(cur==='USD') return '$'+Number(v).toFixed(2); return '₹'+Number(v).toLocaleString('en-IN'); }
 function priceOf(obj, cur){ cur=cur||currency; return cur==='USD' ? (obj.usd||0) : (obj.inr||0); }
 
@@ -1490,7 +1631,10 @@ function renderProducts(){
         ${p.benefits&&p.benefits.length?`<button class="prod-detail-link" onclick="openPD(${p.id})">ⓘ View benefits & nutrition</button>`:''}
         <div class="prod-foot">
           <div class="prod-price">${money(priceOf(sel))}<small>per ${sel.label}</small></div>
-          <button class="add-btn" onclick="addToCart(${p.id})" ${p.qty===0?'disabled':''}>${p.qty===0?'Sold Out':'Add to Cart'}</button>
+        </div>
+        <div class="prod-actions">
+          <button class="cart-btn" onclick="addToCart(${p.id})" ${p.qty===0?'disabled':''}>Add to Cart</button>
+          <button class="add-btn" onclick="buyNow(${p.id})" ${p.qty===0?'disabled':''}>${p.qty===0?'Sold Out':'Buy Now'}</button>
         </div>
       </div>
     </div>`;
@@ -1540,7 +1684,10 @@ function renderCombos(){
           ${orig?`<div class="combo-orig">${money(orig)}</div>`:''}
           ${save>0?`<div class="combo-save">Save ${save}%</div>`:''}
         </div>
-        <button class="combo-buy" onclick="addComboToCart(${c.id})">Add Combo to Cart</button>
+        <div class="combo-actions">
+          <button class="cart-btn" onclick="addComboToCart(${c.id})">Add to Cart</button>
+          <button class="combo-buy" onclick="buyCombo(${c.id})">Buy Now</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1548,6 +1695,72 @@ function renderCombos(){
 }
 </script>
 <script>
+
+// ═══════════════ RENDER GIFTS ═══════════════
+function renderGifts(){
+  const grid = document.getElementById('gift-grid');
+  const sec  = document.getElementById('gifting');
+  if(!grid) return;
+  const list = (gifts||[]).filter(g=>g && g.active!==false);
+  if(!list.length){ if(sec) sec.style.display='none'; grid.innerHTML=''; return; }
+  if(sec) sec.style.display='';
+
+  grid.innerHTML = list.map(g=>{
+    const price = priceOf(g);
+    const orig  = currency==='USD' ? (g.origUsd||0) : (g.origInr||0);
+    const save  = (orig>0 && price>0 && orig>price) ? Math.round((1-price/orig)*100) : 0;
+    const items = (Array.isArray(g.items)?g.items:[]).map(i=>`<div class="gift-item"><span>${esc(i)}</span></div>`).join('');
+    return `
+    <div class="gift-card reveal">
+      <div class="gift-media">
+        ${g.img ? `<img src="${escA(g.img)}" alt="${escA(g.name)}" loading="lazy" onerror="this.outerHTML='<div class=gift-noimg>🎁</div>'">`
+                : `<div class="gift-noimg">🎁</div>`}
+        ${g.ribbon ? `<div class="gift-ribbon">${esc(g.ribbon)}</div>` : ''}
+        ${g.tag ? `<div class="gift-tag">${esc(g.tag)}</div>` : ''}
+      </div>
+      <div class="gift-body">
+        <div class="gift-name">${esc(g.name)}</div>
+        ${g.desc ? `<div class="gift-desc">${esc(g.desc)}</div>` : ''}
+        <div class="gift-items">${items}</div>
+        <div class="gift-foot">
+          ${g.enquire ? `<div class="gift-price" style="font-size:1.05rem;color:var(--ink-soft)">Price on enquiry</div>`
+            : `<div class="gift-price">${money(price)}
+                 ${orig>price&&orig>0?`<span class="gift-orig">${money(orig)}</span>`:''}
+                 ${save>0?`<span class="gift-save">Save ${save}%</span>`:''}
+               </div>`}
+          <div class="gift-actions">
+            ${g.enquire
+              ? `<button class="gift-enq" onclick="giftEnquiry('${escA(g.name)}')">Enquire About This</button>`
+              : `<button class="cart-btn" onclick="addGiftToCart(${g.id})">Add to Cart</button>
+                 <button class="gift-buy" onclick="buyGift(${g.id})">Buy Now</button>`}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  observeReveals();
+}
+function addGiftToCart(gid, quiet){
+  const g = gifts.find(x=>x.id===gid);
+  if(!g || g.enquire) return;
+  const id = 'gift_'+g.id;
+  const ex = cart.find(x=>x.id===id);
+  if(ex) ex.qty++;
+  else cart.push({id, name:g.name+' (Gift)', inr:g.inr, usd:g.usd, img:g.img, emoji:'🎁', qty:1});
+  updateCart();
+  if(quiet) return;
+  openCart();
+  toast(g.name+' added');
+}
+function buyGift(gid){ addGiftToCart(gid, true); checkout(); }
+function giftEnquiry(name){
+  scrollToId('wholesale');
+  setTimeout(()=>{
+    const m = document.getElementById('b2b-message');
+    if(m){ m.value = 'I would like to enquire about: '+name+'\n\nQuantity needed: \nRequired by: '; m.focus(); }
+  }, 700);
+}
+
 // ═══════════════ PRODUCT DETAIL MODAL ═══════════════
 function openPD(pid){
   const p = products.find(x=>x.id===pid);
@@ -1582,7 +1795,7 @@ function closePD(){ document.getElementById('pd-modal').classList.remove('open')
 function openCart(){ document.getElementById('cart').classList.add('open'); document.getElementById('cart-overlay').classList.add('open'); }
 function closeCart(){ document.getElementById('cart').classList.remove('open'); document.getElementById('cart-overlay').classList.remove('open'); }
 
-function addToCart(pid){
+function addToCart(pid, quiet){
   const p = products.find(x=>x.id===pid);
   if(!p||p.qty===0) return;
   const s = getSelSize(p);
@@ -1590,17 +1803,21 @@ function addToCart(pid){
   const ex = cart.find(x=>x.id===cid);
   if(ex) ex.qty++;
   else cart.push({id:cid, name:p.name+' ('+s.label+')', inr:s.inr, usd:s.usd, img:mainImg(p), emoji:p.emoji, qty:1});
-  updateCart(); openCart();
+  updateCart();
+  if(quiet) return;             // Buy Now goes straight to checkout instead
+  openCart();
   toast(p.name+' ('+s.label+') added');
 }
-function addComboToCart(cid){
+function addComboToCart(cid, quiet){
   const c = combos.find(x=>x.id===cid);
   if(!c) return;
   const id = 'combo_'+c.id;
   const ex = cart.find(x=>x.id===id);
   if(ex) ex.qty++;
   else cart.push({id, name:c.name+' (Combo)', inr:c.inr, usd:c.usd, img:c.img, emoji:'🎁', qty:1});
-  updateCart(); openCart();
+  updateCart();
+  if(quiet) return;
+  openCart();
   toast(c.name+' added');
 }
 function cartQty(id,d){
@@ -1690,6 +1907,21 @@ function cartTotals(){
   const del = calcDelivery(sub-disc);
   return { sub, disc, del, total: sub-disc+del };
 }
+
+
+function buyCombo(id){
+  addComboToCart(id, true);   // quiet — skip the drawer
+  checkout();
+}
+
+// ── Buy Now: straight from the card to checkout ──
+function buyNow(id){
+  const p = products.find(x=>x.id===id);
+  if(!p || p.qty===0){ toast('Sold out'); return; }
+  addToCart(id, true);          // quiet — no cart drawer
+  checkout();                   // opens the details modal
+}
+
 function checkout(){
   if(!cart.length){ toast('Your cart is empty'); return; }
   if(!store.rzpKey){
@@ -1845,7 +2077,8 @@ function renderTicker(){
 }
 
 
-// ═══════════════ HERO SLIDESHOW ═══════════════
+
+
 function renderHero(){
   const wrap = document.getElementById('hero-slides');
   const dots = document.getElementById('hero-dots');
@@ -1926,6 +2159,8 @@ function needsRepair(){ return (products||[]).filter(p=>p._repaired).length; }
 window.__setProducts = function(arr){ products = (arr||[]).map(normalizeProduct); renderProducts(); if(admOpen()&&!editing()) buildAdmProducts(); refreshStats(); };
 window.__setCombos = function(arr){ if(Array.isArray(arr)&&arr.length) combos=arr; renderCombos(); if(admOpen()&&!editing()) buildAdmCombos(); refreshStats(); };
 window.__setStore = function(d){ store={...store,...d}; updateCart(); if(admOpen()&&!editing()){buildAdmStore();buildAdmCoupons();} refreshStats(); };
+window.__setGifts = function(arr){ if(Array.isArray(arr)&&arr.length) combos=arr; renderGifts(); if(admOpen()&&!editing()) buildAdmGifts(); refreshStats(); };
+window.__setStore = function(d){ store={...store,...d}; updateCart(); if(admOpen()&&!editing()){buildAdmStore();buildAdmCoupons();} refreshStats(); };
 window.__setBranding = function(d){ branding={...branding,...d}; applyBranding(); };
 window.__setPolicies = function(d){ if(d) policies={...POLICY_DEFAULTS, ...d}; if(admOpen()&&!editing()) buildPolicyForm(); };
 window.__setHero = function(d){ if(d&&Array.isArray(d.images)) heroImages=d.images; renderHero(); if(admOpen()&&!editing()) buildHeroInputs(); };
@@ -1946,7 +2181,7 @@ function openLogin(){ document.getElementById('admin-login').classList.add('open
 function closeLogin(){ document.getElementById('admin-login').classList.remove('open'); }
 function openAdmin(){
   document.getElementById('admin').classList.add('open');
-  buildAdmProducts(); buildAdmCombos(); buildAdmStore(); buildAdmCoupons(); buildB2BInputs(); buildHeroInputs(); buildInquiries(); buildPolicyForm(); loadBrandingForm(); loadSales(); refreshStats();
+  buildAdmProducts(); buildAdmCombos(); buildAdmGifts(); buildAdmStore(); buildAdmCoupons(); buildB2BInputs(); buildHeroInputs(); buildInquiries(); buildPolicyForm(); loadBrandingForm(); loadSales(); refreshStats();
   setTimeout(checkFB,600);
 }
 function closeAdmin(){ document.getElementById('admin').classList.remove('open'); }
@@ -1959,6 +2194,7 @@ function admTab(name){
   try{
     if(name==='products') buildAdmProducts();
     else if(name==='combos') buildAdmCombos();
+    else if(name==='gifts') buildAdmGifts();
     else if(name==='store') buildAdmStore();
     else if(name==='coupons') buildAdmCoupons();
     else if(name==='b2b') buildB2BInputs();
@@ -2300,12 +2536,13 @@ async function repairCatalogue(btn){
   buildAdmProducts();
 }
 function showRepairBanner(){
-  const b = document.getElementById('repair-banner');
-  if(!b) return;
   const n = needsRepair();
-  b.style.display = n ? 'block' : 'none';
+  const b = document.getElementById('repair-banner');
+  if(b) b.style.display = n ? 'block' : 'none';
   const cEl = document.getElementById('repair-count');
   if(cEl) cEl.textContent = n;
+  const ov = document.getElementById('ov-repair');
+  if(ov) ov.style.display = n ? 'block' : 'none';
 }
 
 // ═══════════════ ADMIN: COMBOS ═══════════════
@@ -2348,6 +2585,7 @@ async function saveCombo(id, btn){
   c.inr=parseFloat(g('c-inr-'))||0; c.usd=parseFloat(g('c-usd-'))||0;
   c.origInr=parseFloat(g('c-oinr-'))||0; c.origUsd=parseFloat(g('c-ousd-'))||0;
   renderCombos();
+  renderGifts();
   const ok=await window.saveComboFB(c);
   flashSaved(btn, ok, 'Updated');
   toast(ok?('✅ "'+c.name+'" updated — live on the site'):saveMsg(false,'Combo'));
@@ -2378,6 +2616,103 @@ async function resetCombos(){
   buildAdmCombos(); renderCombos();
   for(const c of combos) await window.saveComboFB(c);
   toast('✅ Combos reset');
+}
+
+
+// ═══════════════ ADMIN: GIFTS ═══════════════
+function normGift(g){
+  g.items = Array.isArray(g.items) ? g.items : [];
+  ['name','tag','ribbon','desc','img'].forEach(k=>{ if(typeof g[k]!=='string') g[k]=''; });
+  ['inr','usd','origInr','origUsd'].forEach(k=>{ g[k] = Number(g[k])||0; });
+  if(typeof g.active!=='boolean') g.active = true;
+  if(typeof g.enquire!=='boolean') g.enquire = false;
+  return g;
+}
+function buildAdmGifts(){
+  gifts = gifts.map(normGift);
+  const grid = document.getElementById('adm-gift-grid');
+  if(!grid) return;
+  grid.innerHTML = gifts.map(g=>`
+    <div class="adm-card">
+      <div class="adm-card-top">
+        <div class="adm-ic">${g.img?`<img src="${escA(g.img)}">`:'🎀'}</div>
+        <div style="flex:1"><div class="adm-card-name">${esc(g.name)}</div><div class="adm-card-sub">${g.active?'✅ Live':'❌ Hidden'}</div></div>
+        <label class="toggle"><input type="checkbox" ${g.active?'checked':''} onchange="toggleGift(${g.id},this.checked)"><div class="tr"></div></label>
+      </div>
+      <div class="af"><label>Image URL</label>
+        <div class="imgprev" id="gi-${g.id}">${g.img?`<img src="${escA(g.img)}">`:'<span class="ph">🎀</span>'}</div>
+        <input id="g-img-${g.id}" value="${escA(g.img)}" placeholder="gift1.jpg or https://..." oninput="prevImg('gi-${g.id}',this.value)"></div>
+      <div class="af-row">
+        <div class="af"><label>Name</label><input id="g-name-${g.id}" value="${escA(g.name)}"></div>
+        <div class="af"><label>Ribbon</label><input id="g-rib-${g.id}" value="${escA(g.ribbon)}" placeholder="Limited"></div>
+      </div>
+      <div class="af"><label>Description</label><textarea id="g-desc-${g.id}">${esc(g.desc)}</textarea></div>
+      <div class="af"><label>What's inside (comma separated)</label><input id="g-items-${g.id}" value="${escA((g.items||[]).join(', '))}"></div>
+      <div style="background:#0a1206;border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid #1c2c14">
+        <div style="font-size:.66rem;color:#8a9a7e;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:10px">💰 Pricing</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.74rem;color:#8a9a7e;margin-bottom:10px;cursor:pointer">
+          <input type="checkbox" id="g-enq-${g.id}" ${g.enquire?'checked':''} style="width:auto;margin:0">
+          Price on enquiry (hides price, shows an enquiry button)
+        </label>
+        <div class="af-row"><div class="af"><label>Price ₹</label><input type="number" id="g-inr-${g.id}" value="${g.inr}"></div><div class="af"><label>Price $</label><input type="number" id="g-usd-${g.id}" value="${g.usd}"></div></div>
+        <div class="af-row"><div class="af"><label>Original ₹</label><input type="number" id="g-oinr-${g.id}" value="${g.origInr||''}"></div><div class="af"><label>Original $</label><input type="number" id="g-ousd-${g.id}" value="${g.origUsd||''}"></div></div>
+      </div>
+      <div class="af"><label>Tag</label><input id="g-tag-${g.id}" value="${escA(g.tag)}" placeholder="Most Gifted"></div>
+      <div style="display:flex;gap:8px">
+        <button class="adm-save" style="flex:3" onclick="saveGift(${g.id}, this)">💾 Save Gift</button>
+        <button class="adm-del" style="flex:1" onclick="delGift(${g.id})">🗑</button>
+      </div>
+    </div>`).join('') || '<div class="adm-info">No gift boxes yet. Click <strong>+ Add Gift Box</strong>.</div>';
+}
+async function saveGift(id, btn){
+  const g = gifts.find(x=>x.id===id); if(!g) return;
+  const v = k => document.getElementById('g-'+k+'-'+id);
+  g.name = v('name').value.trim() || 'Untitled Gift';
+  g.ribbon = v('rib').value.trim();
+  g.tag = v('tag').value.trim();
+  g.desc = v('desc').value.trim();
+  g.img = v('img').value.trim();
+  g.items = v('items').value.split(',').map(s=>s.trim()).filter(Boolean);
+  g.enquire = v('enq').checked;
+  g.inr = parseFloat(v('inr').value)||0;
+  g.usd = parseFloat(v('usd').value)||0;
+  g.origInr = parseFloat(v('oinr').value)||0;
+  g.origUsd = parseFloat(v('ousd').value)||0;
+  renderGifts();
+  const ok = await window.saveGiftFB(g);
+  flashSaved(btn, ok, 'Updated');
+  toast(ok ? ('✅ "'+g.name+'" updated — live on the site') : saveMsg(false,'Gift box'));
+  buildAdmGifts();
+}
+async function toggleGift(id, v){
+  const g = gifts.find(x=>x.id===id); if(!g) return;
+  g.active = v; renderGifts(); buildAdmGifts();
+  const ok = await window.saveGiftFB(g);
+  toast(ok ? (v?'✅ Gift box updated — now showing':'✅ Gift box updated — now hidden') : saveMsg(false,'Gift box'));
+}
+async function addGift(){
+  const id = gifts.length ? Math.max(...gifts.map(g=>g.id))+1 : 1;
+  const g = {id, name:"New Gift Box", tag:"", ribbon:"", desc:"", items:[], img:"",
+             inr:0, usd:0, origInr:0, origUsd:0, active:false, enquire:false};
+  gifts.push(g);
+  buildAdmGifts(); renderGifts();
+  await window.saveGiftFB(g);
+  toast('✅ Gift box added — fill it in, then switch it on');
+}
+async function delGift(id){
+  const g = gifts.find(x=>x.id===id);
+  if(!confirm('Delete "'+(g?g.name:'this gift box')+'"? This cannot be undone.')) return;
+  gifts = gifts.filter(x=>x.id!==id);
+  buildAdmGifts(); renderGifts();
+  await window.deleteGiftFB(id);
+  toast('🗑 Gift box deleted');
+}
+async function resetGifts(){
+  if(!confirm('Reset the gifting section to the default boxes? Your changes will be lost.')) return;
+  gifts = JSON.parse(JSON.stringify(DEFAULT_GIFTS));
+  buildAdmGifts(); renderGifts();
+  for(const g of gifts){ await window.saveGiftFB(g); }
+  toast('✅ Gifting reset to defaults');
 }
 
 // ═══════════════ ADMIN: STORE ═══════════════
@@ -2632,12 +2967,13 @@ function renderSales(){
   h += list.map(o=>{
     const d = o.ts ? new Date(o.ts).toLocaleString() : '';
     const cu = o.customer||{};
-    const items = (o.items||[]).map(i=>'• '+i.name+' × '+i.qty+' — '+money(i.line, o.currency)).join('<br>');
+    // customer fields are typed by strangers at checkout — escape every one
+    const items = (o.items||[]).map(i=>'• '+esc(i.name)+' × '+esc(i.qty)+' — '+money(i.line, o.currency)).join('<br>');
     const done = o.status==='done';
     return '<div class="ord">'
       + '<div class="ord-top">'
-        + '<div><div class="ord-cust">'+(cu.name||'Customer')+'</div>'
-        + '<div class="ord-meta">'+d+(o.paymentId?' · '+o.paymentId:'')+'</div></div>'
+        + '<div><div class="ord-cust">'+esc(cu.name||'Customer')+'</div>'
+        + '<div class="ord-meta">'+esc(d)+(o.paymentId?' · '+esc(o.paymentId):'')+'</div></div>'
         + '<div style="text-align:right">'
           + '<div class="ord-total">'+money(o.total||0, o.currency)+'</div>'
           + '<button class="ord-status '+(done?'done':'new')+'" onclick="toggleOrder(\''+o._id+'\','+(!done)+')">'+(done?'✓ Fulfilled':'Pending')+'</button>'
@@ -2645,11 +2981,11 @@ function renderSales(){
       + '</div>'
       + '<div class="ord-items">'+items
         + '<div style="color:#3a4e32;margin-top:7px;font-size:.74rem">Subtotal '+money(o.subtotal||0,o.currency)
-        + (o.discount?' · Discount −'+money(o.discount,o.currency)+(o.coupon?' ('+o.coupon+')':''):'')
+        + (o.discount?' · Discount −'+money(o.discount,o.currency)+(o.coupon?' ('+esc(o.coupon)+')':''):'')
         + ' · Delivery '+((o.delivery||0)===0?'FREE':money(o.delivery,o.currency))+'</div>'
       + '</div>'
-      + '<div class="ord-addr">📞 '+(cu.phone||'—')+' · ✉️ '+(cu.email||'—')+'<br>📍 '+(cu.address||'—')+', '+(cu.city||'')+' '+(cu.pin||'')
-      + (cu.notes?'<br>📝 '+cu.notes:'')+'</div>'
+      + '<div class="ord-addr">📞 '+esc(cu.phone||'—')+' · ✉️ '+esc(cu.email||'—')+'<br>📍 '+esc(cu.address||'—')+', '+esc(cu.city||'')+' '+esc(cu.pin||'')
+      + (cu.notes?'<br>📝 '+esc(cu.notes):'')+'</div>'
       + '</div>';
   }).join('') || '<div class="adm-info">No orders in this period.</div>';
 
@@ -2666,7 +3002,7 @@ async function toggleOrder(docId, done){
 function exportSalesCSV(){
   const list = salesInRange();
   if(!list.length){ toast('No orders to export'); return; }
-  const esc = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const csvEsc = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
   const rows = [['Date','Payment ID','Name','Phone','Email','Address','City','PIN','Items','Currency','Subtotal','Discount','Coupon','Delivery','Total','Status']];
   list.forEach(o=>{
     const cu=o.customer||{};
@@ -2687,6 +3023,8 @@ function exportSalesCSV(){
   URL.revokeObjectURL(a.href);
   toast('⭳ Exported '+list.length+' orders');
 }
+
+
 
 
 // ═══════════════ ADMIN: POLICIES ═══════════════
@@ -2721,20 +3059,21 @@ function buildInquiries(){
     inquiries = snap.docs.map(d=>d.data());
     refreshStats();
     if(!inquiries.length){ list.innerHTML='<div class="adm-info">No enquiries yet. Wholesale form submissions appear here.</div>'; return; }
+    // every field below is stranger-supplied — esc() or it executes here
     list.innerHTML = inquiries.map(q=>`
       <div class="adm-card" style="margin-bottom:14px">
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-          <div style="color:var(--cream);font-weight:700">${q.company||q.name||'Enquiry'}</div>
-          <div style="color:#3a4e32;font-size:.72rem">${q.ts?new Date(q.ts).toLocaleString():''}</div>
+          <div style="color:var(--cream);font-weight:700">${esc(q.company||q.name||'Enquiry')}</div>
+          <div style="color:#3a4e32;font-size:.72rem">${q.ts?esc(new Date(q.ts).toLocaleString()):''}</div>
         </div>
         <div class="adm-info" style="line-height:1.8">
-          <strong>Contact:</strong> ${q.name||'—'} · ${q.email||'—'} · ${q.phone||'—'}<br>
-          <strong>Type:</strong> ${q.type||'—'} · <strong>Volume:</strong> ${q.volume||'—'}<br>
-          <strong>Oils:</strong> ${q.oils||'—'}<br>
-          <strong>Message:</strong> ${q.message||'—'}
+          <strong>Contact:</strong> ${esc(q.name||'—')} · ${esc(q.email||'—')} · ${esc(q.phone||'—')}<br>
+          <strong>Type:</strong> ${esc(q.type||'—')} · <strong>Volume:</strong> ${esc(q.volume||'—')}<br>
+          <strong>Oils:</strong> ${esc(q.oils||'—')}<br>
+          <strong>Message:</strong> ${esc(q.message||'—')}
         </div>
       </div>`).join('');
-  }).catch(e=>{ list.innerHTML='<div class="adm-info">Could not load enquiries. '+e.message+'</div>'; });
+  }).catch(e=>{ list.innerHTML='<div class="adm-info">Could not load enquiries. '+esc(e.message)+'</div>'; });
 }
 </script>
 <script>
@@ -2762,6 +3101,10 @@ function loadCache(){
   try{
     const c = localStorage.getItem('sunsa_combos');
     if(c){ const a=JSON.parse(c); if(Array.isArray(a)&&a.length) combos=a; }
+  }catch(e){}
+  try{
+    const g = localStorage.getItem('sunsa_gifts');
+    if(g){ const a=JSON.parse(g); if(Array.isArray(a)&&a.length) gifts=a; }
   }catch(e){}
   try{
     const s = localStorage.getItem('sunsa_store');
@@ -2807,7 +3150,7 @@ function loadCache(){
   if(fc) fc.textContent = '© '+new Date().getFullYear()+' Sunsa Organics. All rights reserved.';
 
   // Seed Firestore on very first run
-  if(window.seedIfEmpty) window.seedIfEmpty(products, combos);
+  if(window.seedIfEmpty) window.seedIfEmpty(products, combos, gifts);
 
   // Close product modal on Escape
   document.addEventListener('keydown', e=>{
