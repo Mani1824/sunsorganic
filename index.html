@@ -174,7 +174,7 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .brand-name small{display:block;font-family:'Inter',sans-serif;font-size:.54rem;letter-spacing:.28em;
   text-transform:uppercase;color:rgba(250,237,205,.5);font-weight:500;margin-top:4px;}
 .nav{display:flex;align-items:center;gap:36px;}
-.nav a{font-size:.8rem;font-weight:400;color:rgba(250,237,205,.72);letter-spacing:.03em;position:relative;padding:4px 0;transition:color .25s;}
+.nav a{font-size:.8rem;font-weight:400;color:rgba(250,237,205,.72);letter-spacing:.03em;position:relative;padding:4px 0;transition:color .25s;cursor:pointer;user-select:none;-webkit-user-select:none;}
 .nav a::after{content:'';position:absolute;left:0;bottom:-3px;width:0;height:1px;background:var(--gold-l);transition:width .3s ease;}
 .nav a:hover{color:var(--cream);}
 .nav a:hover::after{width:100%;}
@@ -455,7 +455,9 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .contact-info h2 em{font-style:italic;color:var(--gold-t);}
 .contact-info p{font-size:1rem;color:var(--ink-soft);line-height:1.7;margin-bottom:28px;}
 .contact-methods{display:flex;flex-direction:column;gap:16px;}
-.cmethod{display:flex;align-items:center;gap:15px;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px 20px;transition:all .25s;}
+.cmethod{display:flex;align-items:center;gap:15px;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px 20px;transition:all .25s;cursor:pointer;}
+#cm-loc{cursor:default;}
+#cm-loc:hover{transform:none;box-shadow:none;}
 .cmethod:hover{transform:translateX(4px);box-shadow:0 8px 24px var(--shadow);}
 .cmethod .ci{width:46px;height:46px;border-radius:12px;background:var(--ink);color:var(--cream);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;}
 .cmethod .cl{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;}
@@ -473,7 +475,7 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
 .foot-brand .brand-name{color:var(--cream);}
 .foot-brand p{font-size:.84rem;line-height:1.7;margin-top:14px;max-width:280px;}
 .foot-col h5{color:var(--cream);font-size:.68rem;text-transform:uppercase;letter-spacing:.16em;margin-bottom:16px;font-weight:700;}
-.foot-col a{display:block;font-size:.84rem;margin-bottom:9px;transition:color .2s;cursor:pointer;}
+.foot-col a{display:block;font-size:.84rem;margin-bottom:9px;transition:color .2s;cursor:pointer;user-select:none;}
 .foot-col a:hover{color:var(--cream);}
 .foot-certs{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
 .foot-cert{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 13px;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;}
@@ -710,7 +712,7 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
     <a onclick="scrollToId('products')">Our Oils</a>
     <a onclick="scrollToId('process')">How It's Made</a>
     <a onclick="scrollToId('why')">Why Cold Pressed</a>
-      <a onclick="scrollToId('better')">Why Our Oil Is Better</a>
+      <a onclick="scrollToId('better')">Why Us</a>
     <a onclick="scrollToId('wholesale')">Wholesale</a>
     <a onclick="scrollToId('contact')">Order Now</a>
   </nav>
@@ -1175,7 +1177,7 @@ service cloud.firestore {
           </div>
           <div class="af"><label>Logo Image URL</label>
             <div class="imgprev" id="br-logo-prev"><span class="ph">☀️</span><span class="hint">Logo preview</span></div>
-            <input id="br-logo" placeholder="https://...logo.png" oninput="prevImg('br-logo-prev',this.value)"></div>
+            <input id="br-logo" value="logo.jpeg" placeholder="logo.jpeg or https://..." oninput="prevImg('br-logo-prev',this.value)"></div>
         </div>
         <div class="adm-box">
           <div class="adm-box-t">Hero Text</div>
@@ -1391,7 +1393,7 @@ let store = {
     {code:"FREESHIP",type:"freeship",value:0,minInr:500,minUsd:20,active:true,expiry:"",limit:0,desc:"Free delivery on your order"},
   ]
 };
-let branding = {name:"Sunsa Organics",tag:"Pure Cold Pressed Oils",logo:"",fssai:"13625999000409",heroH:"Your Health Deserves *Better Oil*",heroS:"Make the switch to cold pressed — pure, natural, and full of nutrition.",phone:"+91 80191 83311",email:"hello@sunsaorganics.com",loc:"S.R. Nagar, Hyderabad"};
+let branding = {name:"Sunsa Organics",tag:"Pure Cold Pressed Oils",logo:"logo.jpeg",fssai:"13625999000409",heroH:"Your Health Deserves *Better Oil*",heroS:"Make the switch to cold pressed — pure, natural, and full of nutrition.",phone:"+91 80191 83311",email:"hello@sunsaorganics.com",loc:"S.R. Nagar, Hyderabad"};
 let b2bImages = ["","","","",""];
 let heroImages = [];
 let heroIdx = 0;
