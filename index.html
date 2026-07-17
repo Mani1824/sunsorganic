@@ -65,6 +65,7 @@ db.collection('settings').onSnapshot(snap=>{
     if(doc.id==='branding' && window.__setBranding) window.__setBranding(doc.data());
     if(doc.id==='b2b' && window.__setB2B) window.__setB2B(doc.data());
     if(doc.id==='hero' && window.__setHero) window.__setHero(doc.data());
+    if(doc.id==='content' && window.__setContent) window.__setContent(doc.data());
     if(doc.id==='policies' && window.__setPolicies) window.__setPolicies(doc.data());
     try{localStorage.setItem('sunsa_'+doc.id, JSON.stringify(doc.data()));}catch(e){}
   });
@@ -609,6 +610,115 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
   .prod-actions,.combo-actions{grid-template-columns:1fr;}
 }
 
+
+/* ═══════════ TRUST STRIP ═══════════ */
+#trust{background:var(--paper);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:0;overflow:hidden;}
+.trust-row{max-width:1300px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);}
+.trust-item{display:flex;align-items:center;gap:13px;padding:22px 26px;border-right:1px solid var(--line);}
+.trust-item:last-child{border-right:none;}
+.trust-ic{width:40px;height:40px;border-radius:11px;background:rgba(215,165,42,.14);display:flex;
+  align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;}
+.trust-t{font-size:.8rem;font-weight:700;color:var(--ink);line-height:1.25;}
+.trust-s{font-size:.68rem;color:var(--ink-soft);margin-top:3px;line-height:1.35;}
+@media(max-width:900px){
+  .trust-row{grid-template-columns:1fr 1fr;}
+  .trust-item:nth-child(2){border-right:none;}
+  .trust-item:nth-child(1),.trust-item:nth-child(2){border-bottom:1px solid var(--line);}
+}
+@media(max-width:480px){
+  .trust-row{grid-template-columns:1fr;}
+  .trust-item{border-right:none;border-bottom:1px solid var(--line);padding:16px 20px;}
+  .trust-item:last-child{border-bottom:none;}
+}
+
+/* ═══════════ USAGE GUIDE ═══════════ */
+#usage{background:var(--cream);}
+.use-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;max-width:1300px;margin:0 auto 30px;}
+.use-card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:22px;
+  transition:transform .3s,box-shadow .3s;}
+.use-card:hover{transform:translateY(-4px);box-shadow:0 14px 36px var(--shadow);}
+.use-top{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.use-em{width:44px;height:44px;border-radius:12px;background:rgba(215,165,42,.12);display:flex;
+  align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0;overflow:hidden;}
+.use-em img{width:100%;height:100%;object-fit:cover;}
+.use-name{font-family:'Fraunces',serif;font-size:1.08rem;font-weight:500;color:var(--ink);line-height:1.2;}
+.use-r{display:flex;gap:9px;padding:9px 0;border-top:1px solid var(--line);font-size:.76rem;line-height:1.5;}
+.use-r:first-of-type{border-top:none;}
+.use-k{color:var(--ink-soft);min-width:78px;font-weight:600;flex-shrink:0;}
+.use-v{color:var(--ink);}
+.use-smoke{font-family:'Fira Mono',monospace;font-weight:700;color:var(--gold-t);}
+.use-note{max-width:760px;margin:0 auto;text-align:center;font-size:.76rem;color:var(--ink-soft);line-height:1.7;
+  background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px 20px;}
+.starter{background:var(--char);border-radius:20px;padding:28px;max-width:1300px;margin:0 auto 26px;
+  display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;}
+.starter h3{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:500;color:var(--cream);margin-bottom:7px;}
+.starter p{font-size:.86rem;color:rgba(250,237,205,.65);line-height:1.6;max-width:560px;}
+.starter-btn{padding:14px 28px;background:var(--gold);color:var(--ink);border:none;border-radius:30px;
+  font-size:.86rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;transition:all .25s;}
+.starter-btn:hover{background:var(--gold-d);transform:translateY(-2px);}
+@media(max-width:760px){.starter{grid-template-columns:1fr;text-align:center;}}
+
+/* ═══════════ FOUNDER ═══════════ */
+#founder{background:var(--cream-deep);border-top:1px solid var(--line);}
+.fnd-wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:0.85fr 1.15fr;gap:56px;align-items:center;}
+.fnd-imgwrap{position:relative;}
+.fnd-img{width:100%;aspect-ratio:4/5;border-radius:20px 20px 90px 20px;overflow:hidden;
+  background:linear-gradient(135deg,rgba(215,165,42,.14),rgba(56,102,65,.08));
+  display:flex;align-items:center;justify-content:center;box-shadow:0 20px 54px var(--shadow);}
+.fnd-img img{width:100%;height:100%;object-fit:cover;}
+.fnd-img .ph{font-size:3rem;opacity:.35;}
+.fnd-imgwrap::after{content:'';position:absolute;left:-16px;bottom:-16px;width:110px;height:110px;
+  border:2px solid var(--gold);border-radius:16px 16px 60px 16px;z-index:-1;}
+.fnd-body p{font-size:.95rem;color:var(--ink-soft);line-height:1.85;margin-bottom:15px;}
+.fnd-sig{margin-top:26px;padding-top:22px;border-top:1px solid var(--line);}
+.fnd-sig-name{font-family:'Fraunces',serif;font-style:italic;font-size:1.6rem;color:var(--ink);
+  transform:rotate(-2.5deg);display:inline-block;letter-spacing:.01em;}
+.fnd-sig-role{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);
+  font-weight:600;margin-top:10px;}
+@media(max-width:900px){
+  .fnd-wrap{grid-template-columns:1fr;gap:34px;}
+  .fnd-img{aspect-ratio:3/2;border-radius:18px 18px 60px 18px;}
+}
+
+/* ═══════════ TESTIMONIALS ═══════════ */
+#testi{background:var(--cream);}
+.tst-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:1300px;margin:0 auto;}
+.tst{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:26px;position:relative;}
+.tst::before{content:'"';position:absolute;top:6px;right:20px;font-family:'Fraunces',serif;font-size:4.5rem;
+  color:var(--gold);opacity:.2;line-height:1;}
+.tst-q{font-size:.9rem;color:var(--ink);line-height:1.75;margin-bottom:18px;position:relative;z-index:1;}
+.tst-who{display:flex;align-items:center;gap:11px;padding-top:14px;border-top:1px solid var(--line);}
+.tst-av{width:36px;height:36px;border-radius:50%;background:rgba(56,102,65,.1);display:flex;
+  align-items:center;justify-content:center;font-size:.82rem;font-weight:700;color:var(--forest);flex-shrink:0;}
+.tst-n{font-size:.82rem;font-weight:700;color:var(--ink);}
+.tst-p{font-size:.7rem;color:var(--ink-soft);margin-top:1px;}
+
+/* ═══════════ SUBSCRIBE ═══════════ */
+#subscribe{padding:0 clamp(20px,5vw,60px) 80px;background:var(--cream);}
+.sub-band{max-width:1300px;margin:0 auto;background:var(--char);border-radius:24px;padding:44px;
+  display:grid;grid-template-columns:1fr auto;gap:32px;align-items:center;position:relative;overflow:hidden;}
+.sub-band::before{content:'';position:absolute;top:-70px;right:-70px;width:280px;height:280px;border-radius:50%;
+  background:radial-gradient(circle,rgba(215,165,42,.16),transparent 70%);pointer-events:none;}
+.sub-eyebrow{font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:9px;}
+.sub-band h3{font-family:'Fraunces',serif;font-size:clamp(1.5rem,3vw,2.1rem);font-weight:500;color:var(--cream);
+  margin-bottom:9px;letter-spacing:-.01em;}
+.sub-band p{font-size:.88rem;color:rgba(250,237,205,.65);line-height:1.65;max-width:520px;}
+.sub-note{font-size:.7rem;color:rgba(250,237,205,.45);margin-top:12px;}
+.sub-btn{padding:15px 32px;background:var(--gold);color:var(--ink);border:none;border-radius:30px;
+  font-size:.88rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;
+  transition:all .25s;box-shadow:0 6px 20px rgba(215,165,42,.3);}
+.sub-btn:hover{background:var(--gold-d);transform:translateY(-2px);}
+@media(max-width:760px){.sub-band{grid-template-columns:1fr;padding:32px;text-align:center;}}
+
+/* ═══════════ CHECKOUT TRUST BADGES ═══════════ */
+.tbadges{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;
+  padding:12px;background:rgba(56,102,65,.05);border:1px solid var(--line);border-radius:12px;}
+.tbadge{text-align:center;font-size:.6rem;color:var(--ink-soft);line-height:1.35;font-weight:600;}
+.tbadge span{display:block;font-size:1rem;margin-bottom:3px;}
+.prod-trust{display:flex;gap:12px;flex-wrap:wrap;padding:10px 0 0;margin-top:10px;border-top:1px solid var(--line);}
+.prod-trust div{font-size:.63rem;color:var(--ink-soft);display:flex;align-items:center;gap:4px;font-weight:600;}
+
 /* ═══════════ COMBOS ═══════════ */
 #combos{background:linear-gradient(160deg,var(--cream-deep),var(--cream));}
 .combo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:26px;}
@@ -1095,6 +1205,9 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
   </div>
 </section>
 
+<!-- TRUST STRIP -->
+<section id="trust"><div class="trust-row" id="trust-row"></div></section>
+
 <!-- TICKER -->
 <div class="ticker">
   <div class="ticker-track" id="ticker-track"></div>
@@ -1108,6 +1221,28 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
     <p class="sec-sub">Every bottle is single-origin, chemical-free, and cold pressed to preserve full nutrition. <span id="size-list">Available in 500ml, 1L and 5L.</span></p>
   </div>
   <div class="prod-grid" id="prod-grid"></div>
+</section>
+
+<!-- OIL USAGE GUIDE -->
+<section class="section" id="usage">
+  <div class="sec-head center reveal">
+    <div class="eyebrow"><span class="line"></span><span>Know Your Oil</span></div>
+    <h2 class="sec-title">Which Oil, <em>When</em></h2>
+    <p class="sec-sub">Cold pressed oils each have their own limits. Here's what to use where — and what not to.</p>
+  </div>
+  <div class="starter reveal">
+    <div>
+      <h3>Not sure where to start?</h3>
+      <p>Most kitchens want one everyday oil and one for finishing. Our Starter Triple Pack covers both — groundnut for daily cooking, coconut and sesame for flavour.</p>
+    </div>
+    <button class="starter-btn" onclick="scrollToId('combos')">See the Starter Pack →</button>
+  </div>
+  <div class="use-grid" id="use-grid"></div>
+  <p class="use-note reveal">
+    <strong>Why some numbers look low:</strong> refining raises an oil's smoke point — that's the main reason it's done.
+    Our oils aren't refined, so several of them aren't suited to deep frying. That's the honest trade for keeping
+    the nutrients and flavour in. Figures are typical for unrefined oil and vary a little batch to batch.
+  </p>
 </section>
 
 <!-- COMBOS -->
@@ -1142,6 +1277,24 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
     <div class="pstep reveal"><div class="pstep-num">02</div><div class="pstep-icon">⚙️</div><h3>Wooden Cold Press</h3><p>Seeds are slowly pressed in a traditional wooden press, never exceeding 40°C.</p></div>
     <div class="pstep reveal"><div class="pstep-num">03</div><div class="pstep-icon">💧</div><h3>Natural Settling</h3><p>Oil is naturally settled and lightly filtered — no bleaching, no deodorising, no chemicals.</p></div>
     <div class="pstep reveal"><div class="pstep-num">04</div><div class="pstep-icon">🫙</div><h3>Fresh Bottling</h3><p>Every batch is lab tested, then bottled fresh to lock in aroma, colour and nutrition.</p></div>
+  </div>
+</section>
+
+<!-- FOUNDER STORY -->
+<section class="section" id="founder" style="display:none">
+  <div class="fnd-wrap">
+    <div class="fnd-imgwrap reveal">
+      <div class="fnd-img" id="fnd-img"><span class="ph">👤</span></div>
+    </div>
+    <div class="fnd-body reveal">
+      <div class="eyebrow"><span class="line"></span><span id="fnd-eyebrow">Our Story</span></div>
+      <h2 class="sec-title" id="fnd-title" style="margin-bottom:20px"></h2>
+      <div id="fnd-text"></div>
+      <div class="fnd-sig">
+        <div class="fnd-sig-name" id="fnd-name"></div>
+        <div class="fnd-sig-role" id="fnd-role"></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1258,6 +1411,28 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
       <div class="fld"><label>Message</label><textarea id="b2b-msg" placeholder="Tell us about your requirements..."></textarea></div>
       <button class="b2b-submit" onclick="submitB2B()">Send Wholesale Enquiry</button>
     </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section" id="testi" style="display:none">
+  <div class="sec-head center reveal">
+    <div class="eyebrow"><span class="line"></span><span>In Their Words</span></div>
+    <h2 class="sec-title">What Customers <em>Say</em></h2>
+  </div>
+  <div class="tst-grid" id="tst-grid"></div>
+</section>
+
+<!-- SUBSCRIBE & SAVE -->
+<section id="subscribe" style="display:none">
+  <div class="sub-band reveal">
+    <div style="position:relative;z-index:1">
+      <div class="sub-eyebrow">Subscribe &amp; Save</div>
+      <h3 id="sub-title"></h3>
+      <p id="sub-body"></p>
+      <div class="sub-note" id="sub-note"></div>
+    </div>
+    <button class="sub-btn" id="sub-cta" onclick="subscribeInterest()"></button>
   </div>
 </section>
 
@@ -1380,6 +1555,12 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
       <div id="co-ship-note" class="ship-note"></div>
       <div class="fld"><label>Notes (optional)</label><input id="co-notes" placeholder="Any delivery instructions"></div>
       <div id="co-summary" style="background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px"></div>
+      <div class="tbadges">
+        <div class="tbadge"><span>🔒</span>Secure<br>payment</div>
+        <div class="tbadge"><span>📋</span>FSSAI<br>licensed</div>
+        <div class="tbadge"><span>↩️</span>Damaged?<br>Replaced</div>
+        <div class="tbadge"><span>🚚</span>Dispatch<br>in 2–3 days</div>
+      </div>
       <button class="checkout-btn" onclick="payNow()">Pay Securely →</button>
       <div class="cart-secure">🔒 Secure payment via Razorpay</div>
     </div>
@@ -1527,6 +1708,7 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
       <div class="adm-nav" id="nav-products" onclick="admTab('products')"><span class="ni">🫙</span> Products</div>
       <div class="adm-nav" id="nav-combos" onclick="admTab('combos')"><span class="ni">🎁</span> Combos & Offers</div>
       <div class="adm-nav" id="nav-gifts" onclick="admTab('gifts')"><span class="ni">🎀</span> Gifting</div>
+      <div class="adm-nav" id="nav-content" onclick="admTab('content')"><span class="ni">📝</span> Page Content</div>
       <div class="adm-side-sec">Sales</div>
       <div class="adm-nav" id="nav-sales" onclick="admTab('sales')"><span class="ni">📈</span> Sales &amp; Orders</div>
       <div class="adm-side-sec">Store</div>
@@ -1713,6 +1895,91 @@ service cloud.firestore {
         <button class="adm-save sec" style="margin-top:16px;max-width:260px" onclick="resetGifts()">↺ Reset to defaults</button>
       </div>
 
+      <!-- PAGE CONTENT -->
+      <div class="adm-tab" id="tab-content">
+        <div class="adm-h">📝 Page Content</div>
+        <div class="adm-info" style="margin-bottom:14px;border-color:#e0a040">
+          <strong style="color:#e0a040">Read this before switching anything on.</strong><br>
+          The founder story and testimonials below are <strong>placeholders I wrote</strong> — they are
+          <strong>switched OFF</strong> so they cannot go live by accident. Fake testimonials on a shop
+          are illegal in India (CCPA) and most other markets. Turn them on only once the words are real.
+        </div>
+        <div class="adm-grid">
+
+          <div class="adm-card">
+            <div class="adm-card-top">
+              <div class="adm-ic">🏅</div>
+              <div style="flex:1"><div class="adm-card-name">Trust Strip</div><div class="adm-card-sub">Sits directly under the hero</div></div>
+              <label class="toggle"><input type="checkbox" id="ct-trustOn"><div class="tr"></div></label>
+            </div>
+            <div class="adm-info" style="margin-bottom:12px">
+              Only claim what your client can evidence. FSSAI is confirmed. <strong style="color:#e0a040">NABL,
+              "lab tested" and "batch tested" are NOT</strong> — leave them out unless you have the certificate.
+            </div>
+            <div id="ct-trust-rows"></div>
+            <button class="adm-save sec" style="margin-bottom:10px" onclick="addTrustRow()">+ Add badge (max 4)</button>
+            <button class="adm-save" onclick="saveContent(this)">💾 Save</button>
+          </div>
+
+          <div class="adm-card">
+            <div class="adm-card-top">
+              <div class="adm-ic">👤</div>
+              <div style="flex:1"><div class="adm-card-name">Founder Story</div><div class="adm-card-sub">After "How It's Made"</div></div>
+              <label class="toggle"><input type="checkbox" id="ct-founderOn"><div class="tr"></div></label>
+            </div>
+            <div class="af"><label>Photo URL</label>
+              <div class="imgprev" id="fi-prev"><span class="ph">👤</span></div>
+              <input id="ct-founderImg" placeholder="founder.jpg" oninput="prevImg('fi-prev',this.value)"></div>
+            <div class="af-row">
+              <div class="af"><label>Eyebrow</label><input id="ct-founderEyebrow"></div>
+              <div class="af"><label>Heading</label><input id="ct-founderTitle"></div>
+            </div>
+            <div class="af"><label>Story — blank line between paragraphs</label>
+              <textarea id="ct-founderBody" style="min-height:170px"></textarea></div>
+            <div class="af-row">
+              <div class="af"><label>Signature name</label><input id="ct-founderName"></div>
+              <div class="af"><label>Role</label><input id="ct-founderRole"></div>
+            </div>
+            <button class="adm-save" onclick="saveContent(this)">💾 Save</button>
+          </div>
+
+          <div class="adm-card">
+            <div class="adm-card-top">
+              <div class="adm-ic">💬</div>
+              <div style="flex:1"><div class="adm-card-name">Testimonials</div><div class="adm-card-sub">Before "Order Now"</div></div>
+              <label class="toggle"><input type="checkbox" id="ct-testiOn"><div class="tr"></div></label>
+            </div>
+            <div class="adm-info" style="margin-bottom:12px">
+              <span style="color:#e0a040">Use real customers only.</span> Ask permission before publishing a name.
+            </div>
+            <div id="ct-testi-rows"></div>
+            <button class="adm-save sec" style="margin-bottom:10px" onclick="addTestiRow()">+ Add testimonial</button>
+            <button class="adm-save" onclick="saveContent(this)">💾 Save</button>
+          </div>
+
+          <div class="adm-card">
+            <div class="adm-card-top">
+              <div class="adm-ic">🔁</div>
+              <div style="flex:1"><div class="adm-card-name">Subscribe &amp; Save</div><div class="adm-card-sub">Before "Order Now"</div></div>
+              <label class="toggle"><input type="checkbox" id="ct-subOn"><div class="tr"></div></label>
+            </div>
+            <div class="adm-info" style="margin-bottom:12px">
+              This <strong>collects interest only</strong> — it fills the enquiry form. It does <strong>not</strong>
+              charge anyone automatically. Real recurring billing needs a server and an RBI e-mandate through Razorpay.
+              Don't promise auto-renewal in the wording.
+            </div>
+            <div class="af"><label>Heading</label><input id="ct-subTitle"></div>
+            <div class="af"><label>Body</label><textarea id="ct-subBody"></textarea></div>
+            <div class="af-row">
+              <div class="af"><label>Button</label><input id="ct-subCta"></div>
+              <div class="af"><label>Small print</label><input id="ct-subNote"></div>
+            </div>
+            <button class="adm-save" onclick="saveContent(this)">💾 Save</button>
+          </div>
+
+        </div>
+      </div>
+
       <!-- SALES -->
       <div class="adm-tab" id="tab-sales">
         <div class="adm-h">📈 Sales &amp; Orders</div>
@@ -1862,6 +2129,56 @@ let gifts = [
 ];
 const DEFAULT_GIFTS = JSON.parse(JSON.stringify(gifts));
 
+// ── Oil usage guide ──
+// Smoke points below are typical published figures for UNREFINED / cold-pressed
+// oils. They are deliberately lower than the refined equivalents — that is the
+// honest trade-off of not refining, and customers deserve to know it before
+// they deep-fry. Editable per product in Admin → Products.
+const USAGE_DEFAULTS = {
+  1:{best:"Everyday sautéing, tempering, dosa & curries", smoke:"160°C / 320°F", avoid:"Deep frying"},
+  2:{best:"Sautéing, baking, Kerala dishes, oil pulling", smoke:"175°C / 350°F", avoid:"High-heat frying"},
+  3:{best:"Dressings, dips, low-heat cooking, finishing", smoke:"107°C / 225°F", avoid:"Frying of any kind"},
+  4:{best:"High-heat frying, pickles, Bengali & North Indian cooking", smoke:"250°C / 480°F", avoid:"—"},
+  5:{best:"Stir-fry, tempering, finishing, Asian dishes", smoke:"175°C / 350°F", avoid:"Deep frying"},
+  6:{best:"Dressings, dips, low-heat cooking", smoke:"107°C / 225°F", avoid:"Frying of any kind"},
+};
+
+// ── Editable page content ──
+// Everything here is a PLACEHOLDER written by Claude. Replace it in
+// Admin → Page Content before launch.
+const CONTENT_DEFAULTS = {
+  founderOn: false,
+  founderEyebrow: "Our Story",
+  founderTitle: "Why we started Sunsa",
+  founderBody: "[Replace this with your founder's own words.]\n\nWhat made them look at the oil in their kitchen and decide to do it differently? Who taught them about cold pressing? What did they refuse to compromise on?\n\nTwo or three short paragraphs in the founder's own voice will do more work here than any amount of marketing copy.",
+  founderName: "[Founder's name]",
+  founderRole: "Founder, Sunsa Organics",
+  founderImg: "",
+
+  trustOn: true,
+  trustItems: [
+    {icon:"📋", label:"FSSAI Licensed", sub:"13625999000409"},
+    {icon:"🔥", label:"Never Above 40°C", sub:"Cold pressed, always"},
+    {icon:"🧪", label:"899 kcal / 100ml", sub:"99.9g fat, 0g trans fat"},
+    {icon:"🌾", label:"Single Origin", sub:"One farm, one variety"},
+  ],
+
+  testiOn: false,
+  testimonials: [
+    {quote:"[Replace with a real customer's words.]", name:"[Customer name]", place:"[City]"},
+    {quote:"[Replace with a real customer's words.]", name:"[Customer name]", place:"[City]"},
+    {quote:"[Replace with a real customer's words.]", name:"[Customer name]", place:"[City]"},
+  ],
+
+  subOn: false,
+  subTitle: "Never run out",
+  subBody: "Tell us which oils you use and how often. We'll get in touch to set up a repeat delivery — and you'll save on every order.",
+  subCta: "Join the list",
+  subNote: "We'll contact you to arrange it — nothing is charged automatically.",
+};
+let content = JSON.parse(JSON.stringify(CONTENT_DEFAULTS));
+
+
 let combos = [
   {id:1,active:true,name:"Starter Triple Pack",ribbon:"Best Value",tag:"Seasonal Combo",
    desc:"Three of our most popular oils in one bundle — perfect intro to cold pressing.",
@@ -1968,6 +2285,11 @@ function renderProducts(){
         <div class="prod-origin">📍 ${p.origin}</div>
         <div class="prod-sizes">${sizes.map(s=>`<button class="size-btn${sel.label===s.label?' on':''}" onclick="setSize(${p.id},'${s.label}')">${s.label}</button>`).join('')}</div>
         ${p.benefits&&p.benefits.length?`<button class="prod-detail-link" onclick="openPD(${p.id})">ⓘ View benefits & nutrition</button>`:''}
+        <div class="prod-trust">
+          <div>📋 FSSAI licensed</div>
+          <div>🔥 Cold pressed</div>
+          <div>🌾 Single origin</div>
+        </div>
         <div class="prod-foot">
           <div class="prod-price">${money(priceOf(sel))}<small>per ${sel.label}</small></div>
         </div>
@@ -2034,6 +2356,116 @@ function renderCombos(){
 }
 </script>
 <script>
+
+
+// ═══════════════ TRUST / USAGE / FOUNDER / TESTIMONIALS / SUBSCRIBE ═══════════════
+function renderTrust(){
+  const row = document.getElementById('trust-row');
+  const sec = document.getElementById('trust');
+  if(!row) return;
+  const items = (content.trustItems||[]).filter(x=>x && x.label);
+  if(!content.trustOn || !items.length){ if(sec) sec.style.display='none'; return; }
+  if(sec) sec.style.display='';
+  row.style.gridTemplateColumns = 'repeat('+Math.min(items.length,4)+',1fr)';
+  row.innerHTML = items.slice(0,4).map(i=>`
+    <div class="trust-item">
+      <div class="trust-ic">${esc(i.icon||'✓')}</div>
+      <div><div class="trust-t">${esc(i.label)}</div>${i.sub?`<div class="trust-s">${esc(i.sub)}</div>`:''}</div>
+    </div>`).join('');
+}
+
+function usageOf(p){
+  if(p.bestUse || p.smoke) return {best:p.bestUse||'—', smoke:p.smoke||'—', avoid:p.avoid||'—'};
+  return USAGE_DEFAULTS[p.id] || {best:'—', smoke:'—', avoid:'—'};
+}
+function renderUsage(){
+  const grid = document.getElementById('use-grid');
+  const sec = document.getElementById('usage');
+  if(!grid) return;
+  const list = (products||[]).filter(p=>p && p.active!==false);
+  if(!list.length){ if(sec) sec.style.display='none'; return; }
+  if(sec) sec.style.display='';
+  grid.innerHTML = list.map(p=>{
+    const u = usageOf(p);
+    const img = mainImg(p);
+    return `
+    <div class="use-card reveal">
+      <div class="use-top">
+        <div class="use-em">${img?`<img src="${escA(img)}" alt="" loading="lazy" onerror="this.parentElement.textContent='🫗'">`:'🫗'}</div>
+        <div class="use-name">${esc(p.name)}</div>
+      </div>
+      <div class="use-r"><span class="use-k">Best for</span><span class="use-v">${esc(u.best)}</span></div>
+      <div class="use-r"><span class="use-k">Smoke point</span><span class="use-v use-smoke">${esc(u.smoke)}</span></div>
+      <div class="use-r"><span class="use-k">Avoid</span><span class="use-v">${esc(u.avoid)}</span></div>
+    </div>`;
+  }).join('');
+  observeReveals();
+}
+
+function renderFounder(){
+  const sec = document.getElementById('founder');
+  if(!sec) return;
+  if(!content.founderOn){ sec.style.display='none'; return; }
+  sec.style.display='';
+  document.getElementById('fnd-eyebrow').textContent = content.founderEyebrow||'Our Story';
+  document.getElementById('fnd-title').innerHTML = esc(content.founderTitle||'');
+  document.getElementById('fnd-text').innerHTML = String(content.founderBody||'')
+    .split('\n\n').filter(Boolean).map(par=>`<p>${esc(par).replace(/\n/g,'<br>')}</p>`).join('');
+  document.getElementById('fnd-name').textContent = content.founderName||'';
+  document.getElementById('fnd-role').textContent = content.founderRole||'';
+  const im = document.getElementById('fnd-img');
+  im.innerHTML = content.founderImg
+    ? `<img src="${escA(content.founderImg)}" alt="${escA(content.founderName||'')}" onerror="this.parentElement.innerHTML='<span class=ph>👤</span>'">`
+    : '<span class="ph">👤</span>';
+  observeReveals();
+}
+
+function renderTesti(){
+  const sec = document.getElementById('testi');
+  const grid = document.getElementById('tst-grid');
+  if(!sec || !grid) return;
+  const list = (content.testimonials||[]).filter(t=>t && t.quote);
+  if(!content.testiOn || !list.length){ sec.style.display='none'; return; }
+  sec.style.display='';
+  grid.innerHTML = list.map(t=>{
+    const initial = (t.name||'?').trim().charAt(0).toUpperCase();
+    return `
+    <div class="tst reveal">
+      <div class="tst-q">${esc(t.quote)}</div>
+      <div class="tst-who">
+        <div class="tst-av">${esc(initial)}</div>
+        <div><div class="tst-n">${esc(t.name||'')}</div>${t.place?`<div class="tst-p">${esc(t.place)}</div>`:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  observeReveals();
+}
+
+function renderSubscribe(){
+  const sec = document.getElementById('subscribe');
+  if(!sec) return;
+  if(!content.subOn){ sec.style.display='none'; return; }
+  sec.style.display='';
+  document.getElementById('sub-title').textContent = content.subTitle||'';
+  document.getElementById('sub-body').textContent = content.subBody||'';
+  document.getElementById('sub-note').textContent = content.subNote||'';
+  document.getElementById('sub-cta').textContent = content.subCta||'Join the list';
+  observeReveals();
+}
+// Nothing is charged automatically — this collects interest, it does not set up
+// a recurring payment. Razorpay recurring needs a server and an RBI e-mandate.
+function subscribeInterest(){
+  scrollToId('wholesale');
+  setTimeout(()=>{
+    const m = document.getElementById('b2b-message');
+    if(m){
+      m.value = 'SUBSCRIBE & SAVE\n\nOils I use: \nSize: \nHow often (e.g. monthly): \nDelivery address: ';
+      m.focus();
+    }
+  }, 700);
+}
+
+function renderContent(){ renderTrust(); renderFounder(); renderTesti(); renderSubscribe(); }
 
 // ═══════════════ RENDER GIFTS ═══════════════
 function renderGifts(){
@@ -2959,13 +3391,14 @@ function normalizeProduct(p){
 function needsRepair(){ return (products||[]).filter(p=>p._repaired).length; }
 
 // ═══════════════ FIREBASE SYNC SETTERS ═══════════════
-window.__setProducts = function(arr){ products = (arr||[]).map(normalizeProduct); renderProducts(); if(admOpen()&&!editing()) buildAdmProducts(); refreshStats(); };
+window.__setProducts = function(arr){ products = (arr||[]).map(normalizeProduct); renderUsage(); renderProducts(); if(admOpen()&&!editing()) buildAdmProducts(); refreshStats(); };
 window.__setCombos = function(arr){ if(Array.isArray(arr)&&arr.length) combos=arr; renderCombos(); if(admOpen()&&!editing()) buildAdmCombos(); refreshStats(); };
 window.__setStore = function(d){ store={...store,...d}; updateCart(); if(admOpen()&&!editing()){buildAdmStore();buildAdmCoupons();} refreshStats(); };
 window.__setGifts = function(arr){ if(Array.isArray(arr)&&arr.length) combos=arr; renderGifts(); if(admOpen()&&!editing()) buildAdmGifts(); refreshStats(); };
 window.__setStore = function(d){ store={...store,...d}; updateCart(); if(admOpen()&&!editing()){buildAdmStore();buildAdmCoupons();} refreshStats(); };
 window.__setBranding = function(d){ branding={...branding,...d}; applyBranding(); };
 window.__setPolicies = function(d){ if(d) policies={...POLICY_DEFAULTS, ...d}; if(admOpen()&&!editing()) buildPolicyForm(); };
+window.__setContent = function(d){ if(d) content={...CONTENT_DEFAULTS, ...d}; renderContent(); if(admOpen()&&!editing()) buildContentForm(); };
 window.__setHero = function(d){ if(d&&Array.isArray(d.images)) heroImages=d.images; renderHero(); if(admOpen()&&!editing()) buildHeroInputs(); };
 window.__setB2B = function(d){ if(d&&Array.isArray(d.images)) b2bImages=d.images; renderB2BGallery(); if(admOpen()) buildB2BInputs(); };
 
@@ -2984,7 +3417,7 @@ function openLogin(){ document.getElementById('admin-login').classList.add('open
 function closeLogin(){ document.getElementById('admin-login').classList.remove('open'); }
 function openAdmin(){
   document.getElementById('admin').classList.add('open');
-  buildAdmProducts(); buildAdmCombos(); buildAdmGifts(); buildAdmStore(); buildAdmCoupons(); buildB2BInputs(); buildHeroInputs(); buildInquiries(); buildPolicyForm(); loadBrandingForm(); loadSales(); refreshStats();
+  buildAdmProducts(); buildAdmCombos(); buildAdmGifts(); buildContentForm(); buildAdmStore(); buildAdmCoupons(); buildB2BInputs(); buildHeroInputs(); buildInquiries(); buildPolicyForm(); loadBrandingForm(); loadSales(); refreshStats();
   setTimeout(checkFB,600);
 }
 function closeAdmin(){ document.getElementById('admin').classList.remove('open'); }
@@ -2998,6 +3431,7 @@ function admTab(name){
     if(name==='products') buildAdmProducts();
     else if(name==='combos') buildAdmCombos();
     else if(name==='gifts') buildAdmGifts();
+    else if(name==='content') buildContentForm();
     else if(name==='store') buildAdmStore();
     else if(name==='coupons') buildAdmCoupons();
     else if(name==='b2b') buildB2BInputs();
@@ -3389,6 +3823,8 @@ async function saveCombo(id, btn){
   c.origInr=parseFloat(g('c-oinr-'))||0; c.origUsd=parseFloat(g('c-ousd-'))||0;
   renderCombos();
   renderGifts();
+  renderUsage();
+  renderContent();
   const ok=await window.saveComboFB(c);
   flashSaved(btn, ok, 'Updated');
   toast(ok?('✅ "'+c.name+'" updated — live on the site'):saveMsg(false,'Combo'));
@@ -3516,6 +3952,109 @@ async function resetGifts(){
   buildAdmGifts(); renderGifts();
   for(const g of gifts){ await window.saveGiftFB(g); }
   toast('✅ Gifting reset to defaults');
+}
+
+
+// ═══════════════ ADMIN: PAGE CONTENT ═══════════════
+function buildContentForm(){
+  const tab = document.getElementById('tab-content');
+  if(!tab) return;
+
+  // trust strip
+  const trustOn = document.getElementById('ct-trustOn');
+  if(trustOn) trustOn.checked = content.trustOn!==false;
+  const trustRows = document.getElementById('ct-trust-rows');
+  if(trustRows){
+    const items = content.trustItems || CONTENT_DEFAULTS.trustItems;
+    trustRows.innerHTML = items.map((it,i)=>`
+      <div class="af-row" id="tr-${i}" style="align-items:flex-start;margin-bottom:8px">
+        <div class="af" style="flex:0 0 60px;min-width:0"><label>Icon</label><input id="tr-ic-${i}" value="${escA(it.icon||'')}" placeholder="📋"></div>
+        <div class="af" style="flex:1;min-width:0"><label>Label</label><input id="tr-lb-${i}" value="${escA(it.label||'')}"></div>
+        <div class="af" style="flex:1;min-width:0"><label>Sub-label</label><input id="tr-sb-${i}" value="${escA(it.sub||'')}"></div>
+        <button class="adm-del" style="margin-top:22px;flex-shrink:0" onclick="removeTrustRow(${i})">🗑</button>
+      </div>`).join('');
+  }
+
+  // founder
+  const fields = {founderOn:'ct-founderOn', founderImg:'ct-founderImg', founderEyebrow:'ct-founderEyebrow',
+    founderTitle:'ct-founderTitle', founderBody:'ct-founderBody', founderName:'ct-founderName', founderRole:'ct-founderRole',
+    subOn:'ct-subOn', subTitle:'ct-subTitle', subBody:'ct-subBody', subCta:'ct-subCta', subNote:'ct-subNote', testiOn:'ct-testiOn'};
+  for(const [k,id] of Object.entries(fields)){
+    const el = document.getElementById(id);
+    if(!el) continue;
+    if(el.type==='checkbox') el.checked = content[k]!==false && !!content[k];
+    else el.value = content[k]||'';
+  }
+  const fip = document.getElementById('fi-prev');
+  if(fip && content.founderImg) fip.innerHTML=`<img src="${escA(content.founderImg)}">`;
+
+  // testimonials
+  const testiRows = document.getElementById('ct-testi-rows');
+  if(testiRows){
+    const list = content.testimonials||[];
+    testiRows.innerHTML = list.map((t,i)=>`
+      <div class="adm-card" id="testi-row-${i}" style="margin-bottom:10px;padding:14px">
+        <div class="af"><label>Quote</label><textarea id="tq-${i}" style="min-height:70px">${esc(t.quote||'')}</textarea></div>
+        <div class="af-row">
+          <div class="af"><label>Name</label><input id="tn-${i}" value="${escA(t.name||'')}"></div>
+          <div class="af"><label>Location</label><input id="tp-${i}" value="${escA(t.place||'')}"></div>
+          <button class="adm-del" style="margin-top:22px;flex-shrink:0" onclick="removeTestiRow(${i})">🗑</button>
+        </div>
+      </div>`).join('') || '<div class="adm-info">No testimonials yet.</div>';
+  }
+}
+
+function readContentForm(){
+  const g = id => (document.getElementById(id)?.value||'').trim();
+  const gc = id => { const el=document.getElementById(id); return el ? el.checked : false; };
+  const items = (content.trustItems||[]).map((_,i)=>({
+    icon:g('tr-ic-'+i), label:g('tr-lb-'+i), sub:g('tr-sb-'+i)
+  })).filter(x=>x.label);
+  const testi = (content.testimonials||[]).map((_,i)=>({
+    quote:g('tq-'+i), name:g('tn-'+i), place:g('tp-'+i)
+  })).filter(x=>x.quote);
+  return {
+    trustOn:gc('ct-trustOn'), trustItems:items,
+    founderOn:gc('ct-founderOn'), founderImg:g('ct-founderImg'), founderEyebrow:g('ct-founderEyebrow'),
+    founderTitle:g('ct-founderTitle'), founderBody:document.getElementById('ct-founderBody')?.value||'',
+    founderName:g('ct-founderName'), founderRole:g('ct-founderRole'),
+    testiOn:gc('ct-testiOn'), testimonials:testi,
+    subOn:gc('ct-subOn'), subTitle:g('ct-subTitle'), subBody:g('ct-subBody'),
+    subCta:g('ct-subCta'), subNote:g('ct-subNote'),
+  };
+}
+function addTrustRow(){
+  const items = content.trustItems||[];
+  if(items.length>=4){ toast('Maximum 4 trust badges'); return; }
+  items.push({icon:'✓', label:'New badge', sub:''});
+  content.trustItems = items;
+  buildContentForm();
+}
+function removeTrustRow(i){
+  const items = content.trustItems||[];
+  items.splice(i,1);
+  content.trustItems = items;
+  buildContentForm();
+}
+function addTestiRow(){
+  const list = content.testimonials||[];
+  list.push({quote:'', name:'', place:''});
+  content.testimonials = list;
+  buildContentForm();
+}
+function removeTestiRow(i){
+  const list = content.testimonials||[];
+  list.splice(i,1);
+  content.testimonials = list;
+  buildContentForm();
+}
+async function saveContent(btn){
+  content = {...content, ...readContentForm()};
+  renderContent(); renderUsage();
+  try{ localStorage.setItem('sunsa_content', JSON.stringify(content)); }catch(e){}
+  const ok = await window.saveSettingFB('content', content);
+  flashSaved(btn, ok, 'Saved');
+  toast(ok ? '✅ Content saved — live on the site' : saveMsg(false,'Content'));
 }
 
 // ═══════════════ ADMIN: STORE ═══════════════
@@ -3937,6 +4476,10 @@ function loadCache(){
   try{
     const b = localStorage.getItem('sunsa_branding');
     if(b) branding = {...branding, ...JSON.parse(b)};
+  }catch(e){}
+  try{
+    const ct = localStorage.getItem('sunsa_content');
+    if(ct) content = {...CONTENT_DEFAULTS, ...JSON.parse(ct)};
   }catch(e){}
   try{
     const pol = localStorage.getItem('sunsa_policies');
