@@ -70,18 +70,144 @@ db.collection('settings').onSnapshot(snap=>{
   });
 });
 
-auth.onAuthStateChanged(u=>{ window._adminUser = u||null; });
+// ── Auth: customers AND admin now share Firebase Auth, so being logged in
+//    no longer implies admin. Admin = a UID that exists in /admins.
+window.isAdminUid = async function(uid){
+  if(!uid) return false;
+  try{ const d = await db.collection('admins').doc(uid).get(); return d.exists; }
+  catch(e){ return false; }
+};
 
-// ── Auth ──
+auth.onAuthStateChanged(async u=>{
+  window._authUser = u || null;
+  const admin = u ? await window.isAdminUid(u.uid) : false;
+  window._isAdmin = admin;
+  window._adminUser = admin ? u : null;   // admin panel checks this
+  if(window.__onAuth) window.__onAuth(u, admin);
+});
+
 window.doLogin = async function(){
   const email=document.getElementById('al-email').value.trim();
   const pass=document.getElementById('al-pass').value;
   const err=document.getElementById('al-err');
   err.style.display='none';
-  try{ await auth.signInWithEmailAndPassword(email,pass); closeLogin(); openAdmin(); }
+  try{
+    const cred = await auth.signInWithEmailAndPassword(email,pass);
+    if(!(await window.isAdminUid(cred.user.uid))){
+      await auth.signOut();
+      err.textContent='That account is not an administrator.';
+      err.style.display='block';
+      document.getElementById('al-pass').value='';
+      return;
+    }
+    closeLogin(); openAdmin();
+  }
   catch(e){ err.textContent='Incorrect email or password.'; err.style.display='block'; document.getElementById('al-pass').value=''; }
 };
 window.doLogout = async function(){ await auth.signOut(); closeAdmin(); toast('Logged out'); };
+
+// ── Customer accounts ──
+window.custRegisterEmail = async function(email, pass, name){
+  const cred = await auth.createUserWithEmailAndPassword(email, pass);
+  try{ await cred.user.updateProfile({displayName:name||''}); }catch(e){}
+  try{ await cred.user.sendEmailVerification(); }catch(e){}
+  await db.collection('users').doc(cred.user.uid).set({
+    name:name||'', email:email, phone:'', createdAt:Date.now()
+  }, {merge:true});
+  return cred.user;
+};
+window.custLoginEmail = async function(email, pass){
+  const cred = await auth.signInWithEmailAndPassword(email, pass);
+  return cred.user;
+};
+window.custResetEmail = async function(email){ await auth.sendPasswordResetEmail(email); };
+window.custLogout = async function(){ await auth.signOut(); };
+window.resendVerify = async function(){
+  const u = auth.currentUser;
+  if(u && !u.emailVerified) await u.sendEmailVerification();
+};
+window.custSaveProfile = async function(uid, data){
+  try{ await db.collection('users').doc(uid).set(data, {merge:true}); return true; }catch(e){ return false; }
+};
+window.custLoadProfile = async function(uid){
+  try{ const d = await db.collection('users').doc(uid).get(); return d.exists ? d.data() : null; }catch(e){ return null; }
+};
+
+
+// ── OTP for email accounts ──
+// Firebase cannot email a 6-digit code without a server, and any code generated
+// in the browser is readable in devtools — that would be theatre, not verification.
+// So every account, however it was created, is verified by SMS to a phone.
+window.startLinkOtp = async function(phone, containerId){
+  const u = auth.currentUser;
+  if(!u) throw {code:'auth/not-signed-in'};
+  const verifier = window.makeRecaptcha(containerId);
+  if(!verifier) throw {code:'auth/recaptcha-failed'};
+  window._linkConfirm = await u.linkWithPhoneNumber(phone, verifier);
+  return true;
+};
+window.confirmLinkOtp = async function(code){
+  if(!window._linkConfirm) throw {code:'auth/no-otp-pending'};
+  await window._linkConfirm.confirm(code);
+  const u = auth.currentUser;
+  await db.collection('users').doc(u.uid).set({phone:u.phoneNumber||''}, {merge:true});
+  return u;
+};
+// Signing in by phone on an account that already has that number linked returns
+// the SAME uid — that is what proves the person holds the phone.
+window.startLoginOtp = async function(phone, containerId){
+  const verifier = window.makeRecaptcha(containerId);
+  if(!verifier) throw {code:'auth/recaptcha-failed'};
+  window._confirm = await auth.signInWithPhoneNumber(phone, verifier);
+  return true;
+};
+window.confirmLoginOtp = async function(code, expectUid){
+  if(!window._confirm) throw {code:'auth/no-otp-pending'};
+  const r = await window._confirm.confirm(code);
+  if(expectUid && r.user.uid !== expectUid) throw {code:'auth/uid-mismatch'};
+  return r.user;
+};
+
+// ── Phone / OTP ──
+// Needs the Phone provider switched on in Firebase Console and the Blaze plan.
+// Each SMS is billed. reCAPTCHA is required by Firebase and is invisible.
+window.makeRecaptcha = function(containerId){
+  try{
+    if(window._recap){ try{ window._recap.clear(); }catch(e){} window._recap=null; }
+    window._recap = new firebase.auth.RecaptchaVerifier(containerId, {size:'invisible'});
+    return window._recap;
+  }catch(e){ console.error('recaptcha', e); return null; }
+};
+window.sendOtp = async function(phone, containerId){
+  const verifier = window.makeRecaptcha(containerId);
+  if(!verifier) throw new Error('recaptcha-failed');
+  window._confirm = await auth.signInWithPhoneNumber(phone, verifier);
+  return true;
+};
+window.verifyOtp = async function(code, name){
+  if(!window._confirm) throw new Error('no-otp-pending');
+  const cred = await window._confirm.confirm(code);
+  const u = cred.user;
+  const prof = await window.custLoadProfile(u.uid);
+  if(!prof){
+    await db.collection('users').doc(u.uid).set({
+      name:name||u.displayName||'', email:u.email||'', phone:u.phoneNumber||'', createdAt:Date.now()
+    }, {merge:true});
+  }
+  return u;
+};
+// Set a password after signing in with OTP (used by "forgot password")
+window.setPasswordAfterOtp = async function(email, pass){
+  const u = auth.currentUser;
+  if(!u) throw new Error('not-signed-in');
+  if(email && !u.email){
+    const cred = firebase.auth.EmailAuthProvider.credential(email, pass);
+    await u.linkWithCredential(cred);
+  } else {
+    await u.updatePassword(pass);
+  }
+  return true;
+};
 
 // ── Sanitized saves ──
 function cleanObj(o){ const c={}; for(const k in o){ if(o[k]!==undefined) c[k]=(o[k]===null?'':o[k]); } return c; }
@@ -91,6 +217,13 @@ window.saveComboFB = async function(o){ try{ await db.collection('combos').doc(S
 window.deleteComboFB = async function(id){ try{ await db.collection('combos').doc(String(id)).delete(); return true;}catch(e){return false;} };
 window.saveSettingFB = async function(docId, data){ try{ await db.collection('settings').doc(docId).set(cleanObj(data)); return true;}catch(e){console.error('save setting',e);return false;} };
 window.saveOrderFB = async function(data){ try{ await db.collection('orders').add(data); return true;}catch(e){console.error('save order',e);return false;} };
+window.loadMyOrdersFB = async function(uid){
+  if(!uid) return [];
+  try{
+    const s = await db.collection('orders').where('uid','==',uid).limit(50).get();
+    return s.docs.map(d=>({_id:d.id, ...d.data()})).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  }catch(e){ console.error('my orders', e); return []; }
+};
 window.loadOrdersFB = async function(){ try{ const s = await db.collection('orders').orderBy('ts','desc').limit(300).get(); return s.docs.map(d=>({_id:d.id, ...d.data()})); }catch(e){ console.error('load orders',e); return null; } };
 window.updateOrderFB = async function(docId, patch){ try{ await db.collection('orders').doc(docId).update(patch); return true;}catch(e){return false;} };
 window.updateStockFB = async function(id, qty){
@@ -357,7 +490,7 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
   cursor:pointer;font-family:'Inter',sans-serif;transition:all .25s;letter-spacing:.03em;white-space:nowrap;
   box-shadow:0 4px 14px rgba(215,165,42,.35);}
 .add-btn:hover{background:var(--gold-d);transform:translateY(-2px);box-shadow:0 8px 22px rgba(215,165,42,.45);}
-.add-btn:disabled{background:#c9c2b0;color:#fff;cursor:not-allowed;box-shadow:none;transform:none;}
+.add-btn:disabled{background:#c3c8bc;color:#fffdf7;cursor:not-allowed;box-shadow:none;transform:none;}
 .prod-card.oos{opacity:.6;}
 .prod-card.oos .add-btn{background:#9aa094;box-shadow:none;cursor:not-allowed;}
 
@@ -399,7 +532,7 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .gift-foot{margin-top:auto;}
 .gift-price{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:500;color:var(--ink);letter-spacing:-.01em;
   display:flex;align-items:baseline;gap:9px;margin-bottom:12px;flex-wrap:wrap;}
-.gift-orig{font-size:.86rem;color:#a89d86;text-decoration:line-through;font-family:'Inter',sans-serif;font-weight:400;}
+.gift-orig{font-size:.86rem;color:#8b9184;text-decoration:line-through;font-family:'Inter',sans-serif;font-weight:400;}
 .gift-save{font-size:.62rem;background:rgba(215,165,42,.16);color:var(--gold-t);font-weight:700;
   padding:3px 9px;border-radius:20px;letter-spacing:.04em;font-family:'Inter',sans-serif;}
 .gift-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
@@ -439,7 +572,7 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .cmp-row.head .cmp-us,.cmp-row.head .cmp-them{padding-top:22px;padding-bottom:18px;}
 .cmp-brand{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:500;color:var(--ink);line-height:1.15;}
 .cmp-brand small{display:block;font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-t);margin-top:4px;}
-.cmp-other{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:#9a8f7a;line-height:1.15;}
+.cmp-other{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:500;color:#8b9184;line-height:1.15;}
 .cmp-other small{display:block;font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#9aa094;margin-top:4px;}
 .cmp-val{font-size:.83rem;line-height:1.5;display:flex;align-items:flex-start;gap:8px;}
 .cmp-val .ic{flex-shrink:0;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;margin-top:1px;}
@@ -497,7 +630,7 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .combo-chip{background:rgba(34,36,29,.04);border:1px solid var(--line);border-radius:20px;padding:4px 11px;font-size:.67rem;color:var(--ink-soft);font-weight:500;}
 .combo-price-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
 .combo-price{font-family:'Fraunces',serif;font-size:1.55rem;font-weight:500;color:var(--ink);letter-spacing:-.01em;}
-.combo-orig{font-size:.85rem;color:#aaa;text-decoration:line-through;}
+.combo-orig{font-size:.85rem;color:#8b9184;text-decoration:line-through;}
 .combo-save{background:rgba(201,146,46,.15);border:1px solid rgba(201,146,46,.35);color:var(--amber);font-size:.64rem;
   font-weight:800;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;}
 .combo-buy{width:100%;padding:12px;background:var(--gold);color:var(--ink);border:none;border-radius:14px;font-size:.82rem;
@@ -592,7 +725,7 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
 .citem-price{font-size:.88rem;font-weight:600;color:var(--ink);white-space:nowrap;}
 .citem-rm{background:none;border:none;color:#9aa094;font-size:1rem;cursor:pointer;padding:4px;}
 .citem-rm:hover{color:var(--red);}
-.cart-empty{text-align:center;padding:70px 20px;color:#bbb;}
+.cart-empty{text-align:center;padding:70px 20px;color:#8b9184;}
 .cart-empty span{font-size:3.2rem;display:block;margin-bottom:14px;opacity:.5;}
 .cart-foot{padding:22px 24px;border-top:1px solid var(--line);background:var(--paper);}
 .coupon-row{display:flex;gap:8px;margin-bottom:10px;}
@@ -635,6 +768,79 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
 .pd-cert{background:rgba(34,36,29,.04);border:1px solid var(--line);color:var(--ink-soft);font-size:.58rem;font-weight:600;padding:5px 12px;border-radius:20px;letter-spacing:.06em;text-transform:uppercase;}
 .pd-info{font-size:.78rem;color:var(--ink-soft);line-height:1.6;margin-top:12px;}
 .pd-info strong{color:var(--ink);}
+
+
+
+.ship-note{background:rgba(215,165,42,.1);border:1px solid var(--gold);border-radius:10px;
+  padding:10px 12px;font-size:.74rem;color:var(--gold-t);line-height:1.6;margin-bottom:14px;}
+.cur-hint{font-size:.62rem;color:rgba(250,237,205,.55);margin-left:8px;cursor:pointer;text-decoration:underline;
+  background:none;border:none;font-family:'Inter',sans-serif;white-space:nowrap;}
+.cur-hint:hover{color:var(--cream);}
+.fld select{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:11px;
+  font-size:.9rem;font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);outline:none;}
+.fld select:focus{border-color:var(--ink);}
+.fld select:disabled{background:rgba(36,58,42,.05);color:var(--ink-soft);cursor:not-allowed;}
+
+/* ═══════════ ACCOUNT ═══════════ */
+.acct-btn{background:transparent;border:1px solid rgba(250,237,205,.3);color:var(--cream);padding:8px 14px;
+  border-radius:30px;font-size:.76rem;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;
+  display:flex;align-items:center;gap:7px;transition:all .25s;letter-spacing:.02em;white-space:nowrap;}
+.acct-btn:hover{background:rgba(250,237,205,.1);border-color:rgba(250,237,205,.5);}
+.acct-btn .who{max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.au-modal{background:var(--paper);border-radius:24px;max-width:430px;width:100%;overflow:hidden;
+  box-shadow:0 30px 80px rgba(0,0,0,.3);max-height:92vh;overflow-y:auto;}
+.au-head{background:var(--char);padding:26px 30px;position:relative;text-align:center;}
+.au-head h2{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:500;color:var(--cream);letter-spacing:-.01em;}
+.au-head p{font-size:.78rem;color:rgba(250,237,205,.55);margin-top:5px;line-height:1.5;}
+.au-x{position:absolute;top:16px;right:16px;background:rgba(250,237,205,.12);border:none;color:var(--cream);
+  width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.85rem;}
+.au-body{padding:26px 30px 30px;}
+.au-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:rgba(36,58,42,.05);
+  border-radius:12px;padding:5px;margin-bottom:20px;}
+.au-tab{padding:9px;border:none;background:transparent;border-radius:9px;font-size:.8rem;font-weight:600;
+  cursor:pointer;font-family:'Inter',sans-serif;color:var(--ink-soft);transition:all .2s;}
+.au-tab.on{background:var(--paper);color:var(--ink);box-shadow:0 2px 8px var(--shadow);}
+.au-f{margin-bottom:13px;}
+.au-f label{display:block;font-size:.66rem;font-weight:600;color:var(--ink-soft);margin-bottom:6px;
+  letter-spacing:.08em;text-transform:uppercase;}
+.au-f input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:11px;
+  font-size:.9rem;font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);outline:none;transition:border-color .2s;}
+.au-f input:focus{border-color:var(--ink);}
+.au-go{width:100%;padding:14px;background:var(--gold);color:var(--ink);border:none;border-radius:12px;
+  font-size:.9rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .25s;
+  box-shadow:0 5px 16px rgba(215,165,42,.35);margin-top:4px;}
+.au-go:hover{background:var(--gold-d);transform:translateY(-1px);}
+.au-go:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+.au-alt{width:100%;padding:12px;background:transparent;color:var(--ink);border:1.5px solid var(--line);
+  border-radius:12px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+  transition:all .25s;margin-top:9px;}
+.au-alt:hover{border-color:var(--ink);background:rgba(36,58,42,.04);}
+.au-link{background:none;border:none;color:var(--gold-t);font-size:.76rem;font-weight:600;cursor:pointer;
+  font-family:'Inter',sans-serif;text-decoration:underline;padding:4px;}
+.au-msg{padding:11px 13px;border-radius:10px;font-size:.78rem;line-height:1.55;margin-bottom:14px;display:none;}
+.au-msg.err{background:rgba(168,68,63,.1);border:1px solid var(--red);color:#8c3733;display:block;}
+.au-msg.ok{background:rgba(56,102,65,.08);border:1px solid var(--forest);color:var(--forest-d);display:block;}
+.au-msg.info{background:rgba(215,165,42,.12);border:1px solid var(--gold);color:var(--gold-t);display:block;}
+.au-or{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--ink-soft);font-size:.7rem;
+  letter-spacing:.1em;text-transform:uppercase;}
+.au-or::before,.au-or::after{content:'';flex:1;height:1px;background:var(--line);}
+.au-foot{text-align:center;margin-top:14px;font-size:.76rem;color:var(--ink-soft);}
+.otp-boxes{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;}
+.otp-boxes input{text-align:center;font-size:1.15rem;font-weight:700;padding:12px 0;font-family:'Fira Mono',monospace;}
+.au-phone{display:grid;grid-template-columns:82px 1fr;gap:8px;}
+.au-timer{text-align:center;font-size:.74rem;color:var(--ink-soft);margin-top:10px;}
+.acct-panel{position:absolute;top:56px;right:0;background:var(--paper);border:1px solid var(--line);
+  border-radius:16px;box-shadow:0 16px 44px var(--shadow);min-width:230px;padding:8px;display:none;z-index:960;}
+.acct-panel.open{display:block;}
+.acct-who{padding:12px 13px;border-bottom:1px solid var(--line);margin-bottom:6px;}
+.acct-who .n{font-weight:700;font-size:.85rem;color:var(--ink);}
+.acct-who .e{font-size:.72rem;color:var(--ink-soft);margin-top:2px;word-break:break-all;}
+.acct-item{display:block;width:100%;text-align:left;padding:10px 13px;background:none;border:none;
+  border-radius:9px;font-size:.82rem;color:var(--ink);cursor:pointer;font-family:'Inter',sans-serif;transition:background .18s;}
+.acct-item:hover{background:rgba(36,58,42,.05);}
+.verify-warn{background:rgba(215,165,42,.14);border:1px solid var(--gold);border-radius:9px;
+  padding:9px 11px;font-size:.72rem;color:var(--gold-t);margin-bottom:8px;line-height:1.5;}
+@media(max-width:520px){.au-body{padding:22px;}.au-head{padding:22px;}}
 
 /* ═══════════ ADMIN LOGIN ═══════════ */
 .admin-login-ov{position:fixed;inset:0;background:rgba(20,28,16,.94);z-index:3000;display:none;align-items:center;justify-content:center;padding:20px;}
@@ -837,6 +1043,17 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
     <div class="cur-switch">
       <button class="on" id="cur-INR" onclick="setCurrency('INR')">₹ INR</button>
       <button id="cur-USD" onclick="setCurrency('USD')">$ USD</button>
+    </div>
+    <button class="cur-hint" id="cur-hint" style="display:none" onclick="showInr()">In India?</button>
+    <div style="position:relative">
+      <button class="acct-btn" id="acct-btn" onclick="acctClick()"><span>👤</span><span class="who" id="acct-label">Sign In</span></button>
+      <div class="acct-panel" id="acct-panel">
+        <div class="acct-who"><div class="n" id="acct-n"></div><div class="e" id="acct-e"></div></div>
+        <div id="acct-verify"></div>
+        <button class="acct-item" onclick="openMyOrders()">📦 My Orders</button>
+        <button class="acct-item" onclick="closeAcct();authView('setpw');openAuth()">🔑 Change Password</button>
+        <button class="acct-item" onclick="doCustLogout()">↩ Sign Out</button>
+      </div>
     </div>
     <button class="cart-toggle nav-desktop-only" onclick="openCart()">Cart <span class="cart-badge" id="cart-badge">0</span></button>
     <button class="menu-btn" onclick="document.getElementById('nav').classList.toggle('open')">☰</button>
@@ -1157,6 +1374,10 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
         <div class="fld"><label>City *</label><input id="co-city" placeholder="City"></div>
         <div class="fld"><label>PIN / ZIP *</label><input id="co-pin" placeholder="500038"></div>
       </div>
+      <div class="fld"><label>Country *</label>
+        <select id="co-country" onchange="updateShipNote()"></select>
+      </div>
+      <div id="co-ship-note" class="ship-note"></div>
       <div class="fld"><label>Notes (optional)</label><input id="co-notes" placeholder="Any delivery instructions"></div>
       <div id="co-summary" style="background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px"></div>
       <button class="checkout-btn" onclick="payNow()">Pay Securely →</button>
@@ -1196,6 +1417,85 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
       <h2 id="pol-title" style="font-size:1.5rem"></h2>
     </div>
     <div class="pd-content" id="pol-body" style="font-size:.86rem;color:var(--ink-soft);line-height:1.7"></div>
+  </div>
+</div>
+
+
+<!-- ACCOUNT -->
+<div class="modal-ov" id="au-modal" onclick="if(event.target===this)closeAuth()">
+  <div class="au-modal">
+    <div class="au-head">
+      <button class="au-x" onclick="closeAuth()">✕</button>
+      <h2 id="au-title">Sign in to order</h2>
+      <p id="au-sub">We'll text you a code to confirm it's you.</p>
+    </div>
+    <div class="au-body">
+      <div class="au-msg" id="au-msg"></div>
+      <div id="au-main">
+        <div class="au-tabs">
+          <button class="au-tab on" id="au-t-login" onclick="authTab('login')">Sign In</button>
+          <button class="au-tab" id="au-t-reg" onclick="authTab('reg')">Register</button>
+        </div>
+        <div id="au-pane-login">
+          <div class="au-f"><label>Email</label><input type="email" id="au-l-email" placeholder="you@example.com" autocomplete="email"></div>
+          <div class="au-f"><label>Password</label><input type="password" id="au-l-pass" placeholder="Your password" autocomplete="current-password"></div>
+          <button class="au-go" onclick="doCustLogin(this)">Sign In</button>
+          <div class="au-foot"><button class="au-link" onclick="authView('forgot')">Forgot your password?</button></div>
+          <div class="au-or">or</div>
+          <button class="au-alt" onclick="authView('phone')">📱 Sign in with phone &amp; OTP</button>
+        </div>
+        <div id="au-pane-reg" style="display:none">
+          <div class="au-f"><label>Your name</label><input type="text" id="au-r-name" placeholder="Full name" autocomplete="name"></div>
+          <div class="au-f"><label>Email</label><input type="email" id="au-r-email" placeholder="you@example.com" autocomplete="email"></div>
+          <div class="au-f"><label>Password</label><input type="password" id="au-r-pass" placeholder="At least 6 characters" autocomplete="new-password"></div>
+          <div class="au-f"><label>Confirm password</label><input type="password" id="au-r-pass2" placeholder="Type it again" autocomplete="new-password"></div>
+          <button class="au-go" onclick="doCustRegister(this)">Create Account</button>
+          <div class="au-or">or</div>
+          <button class="au-alt" onclick="authView('phone')">📱 Register with phone &amp; OTP</button>
+        </div>
+      </div>
+      <div id="au-phone" style="display:none">
+        <div class="au-f"><label>Your name</label><input type="text" id="au-p-name" placeholder="Full name"></div>
+        <div class="au-f"><label>Mobile number</label>
+          <div class="au-phone"><input type="text" id="au-p-cc" value="+91"><input type="tel" id="au-p-num" placeholder="80191 83311" autocomplete="tel"></div>
+        </div>
+        <button class="au-go" onclick="doSendOtp(this)">Send OTP</button>
+        <div class="au-foot"><button class="au-link" onclick="authView('main')">← Back to email sign in</button></div>
+        <div id="recap-holder"></div>
+      </div>
+      <div id="au-otp" style="display:none">
+        <div class="au-f"><label>Enter the 6-digit code</label>
+          <div class="otp-boxes" id="otp-boxes">
+            <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
+            <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
+          </div>
+        </div>
+        <button class="au-go" onclick="doVerifyOtp(this)">Verify &amp; Continue</button>
+        <div class="au-timer" id="otp-timer"></div>
+        <div class="au-foot"><button class="au-link" onclick="authView('phone')">← Change number</button></div>
+      </div>
+      <div id="au-forgot" style="display:none">
+        <div class="au-f"><label>Email</label><input type="email" id="au-f-email" placeholder="you@example.com"></div>
+        <button class="au-go" onclick="doResetEmail(this)">Email me a reset link</button>
+        <div class="au-or">or</div>
+        <button class="au-alt" onclick="authView('phone')">📱 Reset using phone &amp; OTP</button>
+        <div class="au-foot"><button class="au-link" onclick="authView('main')">← Back to sign in</button></div>
+      </div>
+      <div id="au-setpw" style="display:none">
+        <div class="au-f"><label>New password</label><input type="password" id="au-sp-1" placeholder="At least 6 characters"></div>
+        <div class="au-f"><label>Confirm new password</label><input type="password" id="au-sp-2" placeholder="Type it again"></div>
+        <button class="au-go" onclick="doSetPassword(this)">Save Password</button>
+        <div class="au-foot"><button class="au-link" onclick="closeAuth()">Skip for now</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MY ORDERS -->
+<div class="modal-ov" id="mo-modal" onclick="if(event.target===this)closeMyOrders()">
+  <div class="pd-modal" style="max-width:600px">
+    <div class="pd-hero"><button class="pd-x" onclick="closeMyOrders()">✕</button><h2 style="font-size:1.4rem">My Orders</h2></div>
+    <div class="pd-content" id="mo-body"></div>
   </div>
 </div>
 
@@ -1240,6 +1540,19 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
       <!-- OVERVIEW -->
       <div class="adm-tab on" id="tab-overview">
         <div class="adm-h">📊 Dashboard</div>
+        <div class="adm-info" style="margin-bottom:18px;border-color:#e0a040">
+          <strong style="color:#e0a040">⚠️ Customer accounts are now switched on — three things must be done in Firebase or the site will not work:</strong>
+          <div style="margin-top:10px;line-height:1.85">
+            <strong style="color:#c5d0bc">1. Make yourself an admin.</strong> Customers now log in too, so "logged in" no longer means "admin".
+            In Firebase Console → Firestore → create a collection called <code style="color:#8fb573">admins</code>, and add a document whose
+            <strong>Document ID is your Auth UID</strong> (Authentication → Users → copy the UID). Any single field will do, e.g. <code style="color:#8fb573">role: "admin"</code>.
+            <span style="color:#e08080">Until you do this you will not be able to log in here.</span><br><br>
+            <strong style="color:#c5d0bc">2. Paste the new rules below.</strong> The old ones let any logged-in person edit your products and read every customer's address.<br><br>
+            <strong style="color:#c5d0bc">3. For phone OTP:</strong> Authentication → Sign-in method → enable <strong>Phone</strong>, and add your domain
+            (<code style="color:#8fb573">mani1824.github.io</code>) under Authorized domains. Phone OTP needs the <strong>Blaze</strong> plan and
+            <strong>each SMS is charged</strong>. Email sign-in works on the free plan — enable <strong>Email/Password</strong> too.
+          </div>
+        </div>
         <div id="ov-repair" style="display:none;background:rgba(224,160,64,.1);border:1.5px solid #e0a040;border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:.78rem;color:#e0a040;font-weight:700;line-height:1.6">
           ⚠️ Some products have no size or price data — open <strong>Products &amp; Prices</strong> and click “Repair &amp; save all products”.
         </div>
@@ -1269,31 +1582,53 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
           <pre style="background:#060c04;border:1px solid #1c2c14;border-radius:8px;padding:12px;margin-top:8px;overflow-x:auto;font-family:'Fira Mono',monospace;font-size:.66rem;color:#8fb573;line-height:1.6">rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // An admin is a UID listed in /admins — NOT merely "someone logged in".
+    // Customers can log in now, so request.auth != null is no longer enough.
+    function isAdmin() {
+      return request.auth != null
+        &amp;&amp; exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function isOwner(uid) { return request.auth != null &amp;&amp; request.auth.uid == uid; }
+
+    match /admins/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;          // add admins by hand in the Firebase console
+    }
+
     match /products/{d} {
       allow read: if true;
-      allow create, delete: if request.auth != null;
-      // admin can edit anything; a customer may ONLY lower qty (stock after a sale)
-      allow update: if request.auth != null
+      allow create, delete: if isAdmin();
+      // admin edits anything; anyone may ONLY lower qty (stock after a sale)
+      allow update: if isAdmin()
         || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['qty'])
             &amp;&amp; request.resource.data.qty is int
             &amp;&amp; request.resource.data.qty &gt;= 0
             &amp;&amp; request.resource.data.qty &lt; resource.data.qty);
     }
-    match /combos/{d} {
-      allow read: if true;
-      allow write: if request.auth != null;
+
+    match /combos/{d}   { allow read: if true;  allow write: if isAdmin(); }
+    match /gifts/{d}    { allow read: if true;  allow write: if isAdmin(); }
+    match /settings/{d} { allow read: if true;  allow write: if isAdmin(); }
+
+    // A customer reads only their own profile.
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+      allow read: if isAdmin();
     }
-    match /settings/{d} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
+
+    // Orders: anyone may place one. A signed-in customer may read their own.
+    // Only an admin may read everyone's or change them.
     match /orders/{d} {
       allow create: if true;
-      allow read, update, delete: if request.auth != null;
+      allow read: if isAdmin()
+        || (request.auth != null &amp;&amp; resource.data.uid == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
+
     match /inquiries/{d} {
       allow create: if true;
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if isAdmin();
     }
   }
 }</pre>
@@ -1547,6 +1882,8 @@ let combos = [
 let cart = [];
 try{ const sc=localStorage.getItem('sunsa_cart'); if(sc){ const a=JSON.parse(sc); if(Array.isArray(a)) cart=a; } }catch(e){}
 let currency = localStorage.getItem('sunsa_currency') || 'INR';
+// Did they choose, or are we guessing? A saved choice always beats detection.
+let currencyChosen = !!localStorage.getItem('sunsa_currency');
 let selSizes = {};
 let selImgs = {};
 let appliedCoupon = null;
@@ -1587,10 +1924,12 @@ function priceOf(obj, cur){ cur=cur||currency; return cur==='USD' ? (obj.usd||0)
 // ═══════════════ CURRENCY ═══════════════
 function setCurrency(cur){
   currency = cur;
+  currencyChosen = true;
   try{localStorage.setItem('sunsa_currency',cur);}catch(e){}
   document.getElementById('cur-INR').classList.toggle('on', cur==='INR');
   document.getElementById('cur-USD').classList.toggle('on', cur==='USD');
-  renderProducts(); renderCombos(); updateCart();
+  renderProducts(); renderCombos(); renderGifts(); updateCart();
+  buildCountry();      // ₹ locks delivery to India, $ opens the world
 }
 
 // ═══════════════ NAV ═══════════════
@@ -1743,6 +2082,7 @@ function renderGifts(){
 function addGiftToCart(gid, quiet){
   const g = gifts.find(x=>x.id===gid);
   if(!g || g.enquire) return;
+  if(!requireAuth(()=>addGiftToCart(gid, quiet))) return;
   const id = 'gift_'+g.id;
   const ex = cart.find(x=>x.id===id);
   if(ex) ex.qty++;
@@ -1752,7 +2092,7 @@ function addGiftToCart(gid, quiet){
   openCart();
   toast(g.name+' added');
 }
-function buyGift(gid){ addGiftToCart(gid, true); checkout(); }
+function buyGift(gid){ if(!requireAuth(()=>buyGift(gid))) return; addGiftToCart(gid, true); checkout(); }
 function giftEnquiry(name){
   scrollToId('wholesale');
   setTimeout(()=>{
@@ -1791,6 +2131,432 @@ function openPD(pid){
 }
 function closePD(){ document.getElementById('pd-modal').classList.remove('open'); }
 
+
+// ═══════════════ CUSTOMER ACCOUNTS ═══════════════
+let me = null;          // the signed-in customer
+let meProfile = null;
+let pendingBuy = null;  // what they were trying to buy before we asked them to sign in
+let otpTimer = null;
+let otpOk = false;      // has this session passed an SMS code?
+let otpMode = 'link';   // 'link' = attach a number to a new account, 'verify' = prove they still hold it
+function otpKey(uid){ return 'sunsa_otp_'+uid; }
+function markOtpOk(uid){
+  otpOk = true;
+  try{ sessionStorage.setItem(otpKey(uid),'1'); }catch(e){}
+}
+function loadOtpOk(uid){
+  try{ otpOk = sessionStorage.getItem(otpKey(uid))==='1'; }catch(e){ otpOk=false; }
+  return otpOk;
+}
+
+function openAuth(){ document.getElementById('au-modal').classList.add('open'); }
+function closeAuth(){
+  document.getElementById('au-modal').classList.remove('open');
+  clearInterval(otpTimer);
+  authMsg('');
+}
+function authMsg(text, kind){
+  const m = document.getElementById('au-msg');
+  if(!m) return;
+  if(!text){ m.className='au-msg'; m.textContent=''; return; }
+  m.className = 'au-msg '+(kind||'err');
+  m.innerHTML = text;
+}
+function authView(v){
+  ['main','phone','otp','forgot','setpw'].forEach(x=>{
+    const el = document.getElementById('au-'+x);
+    if(el) el.style.display = (x===v) ? '' : 'none';
+  });
+  authMsg('');
+  const titles = {
+    main:['Sign in to order','However you sign in, we text a code to confirm it\'s you.'],
+    phone:['Verify your number',"We'll text you a 6-digit code."],
+    otp:['Enter your code','Check your messages.'],
+    forgot:['Reset your password','We can email you a link, or verify your number instead.'],
+    setpw:['Set a password','Use this to sign in next time.']
+  };
+  const t = titles[v] || titles.main;
+  document.getElementById('au-title').textContent = t[0];
+  document.getElementById('au-sub').textContent = t[1];
+}
+function authTab(which){
+  document.getElementById('au-t-login').classList.toggle('on', which==='login');
+  document.getElementById('au-t-reg').classList.toggle('on', which==='reg');
+  document.getElementById('au-pane-login').style.display = which==='login' ? '' : 'none';
+  document.getElementById('au-pane-reg').style.display = which==='reg' ? '' : 'none';
+  authMsg('');
+}
+
+// ── The gate: you must be signed in to buy ──
+function requireAuth(action){
+  if(me && otpOk) return true;
+  pendingBuy = action || null;
+  if(me && !otpOk){
+    // signed in, but this session hasn't proved the phone
+    startOtpFor(me);
+    openAuth();
+    return false;
+  }
+  authView('main'); authTab('login');
+  authMsg('Please sign in or register to place an order.', 'info');
+  openAuth();
+  return false;
+}
+// Decide which OTP journey this user needs
+function startOtpFor(u){
+  const phone = (u && u.phoneNumber) || (meProfile && meProfile.phone) || '';
+  if(phone){
+    otpMode = 'verify';
+    const num = document.getElementById('au-p-num');
+    const cc = document.getElementById('au-p-cc');
+    const split = splitPhone(phone);
+    if(cc && num){ cc.value = split.cc; num.value = split.num; }
+    authView('phone');
+    authMsg('For your security we need to text a code to '+maskPhone(phone)+' before you can order.', 'info');
+  } else {
+    otpMode = 'link';
+    authView('phone');
+    authMsg('One more step — verify a mobile number so we can reach you about your order.', 'info');
+  }
+}
+// Dialling codes vary in length (+1, +91, +971) so a greedy regex mis-splits
+// them — "+919876543210" becomes "+919" / "876543210". Match known codes,
+// longest first, instead of guessing.
+const DIAL_CODES = ['+971','+974','+966','+965','+968','+973','+353','+91','+44','+61','+64','+65',
+                    '+60','+49','+33','+31','+39','+34','+27','+81','+41','+46','+1'];
+function splitPhone(phone){
+  const s = String(phone||'').replace(/[^\d+]/g,'');
+  for(const code of DIAL_CODES){
+    if(s.startsWith(code)) return {cc:code, num:s.slice(code.length)};
+  }
+  const m = s.match(/^(\+\d{1,3})(\d+)$/);
+  return m ? {cc:m[1], num:m[2]} : {cc:'+91', num:s.replace(/^\+/,'')};
+}
+function maskPhone(p){
+  const s = String(p||'');
+  if(s.length < 6) return s;
+  return s.slice(0,3) + ' ••••• ' + s.slice(-4);
+}
+function runPending(){
+  const a = pendingBuy; pendingBuy = null;
+  if(!a) return;
+  setTimeout(()=>{ try{ a(); }catch(e){ console.error(e); } }, 260);
+}
+
+async function doCustRegister(btn){
+  const name = document.getElementById('au-r-name').value.trim();
+  const email = document.getElementById('au-r-email').value.trim();
+  const p1 = document.getElementById('au-r-pass').value;
+  const p2 = document.getElementById('au-r-pass2').value;
+  if(!name) return authMsg('Please enter your name.');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return authMsg('That email address does not look right.');
+  if(p1.length < 6) return authMsg('Password must be at least 6 characters.');
+  if(p1 !== p2) return authMsg('The two passwords do not match.');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try{
+    await window.custRegisterEmail(email, p1, name);
+    // An email address alone proves nothing until the link is clicked, so we
+    // verify a phone by SMS before letting anyone order.
+    otpMode = 'link';
+    const pn = document.getElementById('au-p-name'); if(pn) pn.value = name;
+    authView('phone');
+    authMsg('Account created — we\'ve emailed you a verification link.<br><strong>One more step:</strong> verify your mobile number with an OTP.', 'ok');
+  }catch(e){
+    authMsg(authError(e));
+  }finally{ btn.disabled=false; btn.textContent='Create Account'; }
+}
+async function doCustLogin(btn){
+  const email = document.getElementById('au-l-email').value.trim();
+  const pass = document.getElementById('au-l-pass').value;
+  if(!email || !pass) return authMsg('Please enter your email and password.');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try{
+    const u = await window.custLoginEmail(email, pass);
+    meProfile = await window.custLoadProfile(u.uid);
+    if(loadOtpOk(u.uid)){        // already proved it earlier this session
+      closeAuth(); toast('Welcome back'); runPending();
+    } else {
+      startOtpFor(u);            // password alone isn't enough — send a code
+    }
+  }catch(e){ authMsg(authError(e)); }
+  finally{ btn.disabled=false; btn.textContent='Sign In'; }
+}
+async function doCustLogout(){
+  closeAcct();
+  try{ if(me) sessionStorage.removeItem(otpKey(me.uid)); }catch(e){}
+  otpOk = false;
+  await window.custLogout();
+  toast('Signed out');
+}
+async function doResetEmail(btn){
+  const email = document.getElementById('au-f-email').value.trim();
+  if(!email) return authMsg('Please enter your email.');
+  btn.disabled = true;
+  try{
+    await window.custResetEmail(email);
+    authMsg('If an account exists for that address, a reset link is on its way.', 'ok');
+  }catch(e){ authMsg(authError(e)); }
+  finally{ btn.disabled=false; }
+}
+
+// ── Phone / OTP ──
+function fullPhone(){
+  const cc = document.getElementById('au-p-cc').value.trim().replace(/[^\d+]/g,'');
+  const num = document.getElementById('au-p-num').value.trim().replace(/\D/g,'');
+  return (cc.startsWith('+')?cc:'+'+cc) + num;
+}
+async function doSendOtp(btn){
+  const phone = fullPhone();
+  if(phone.replace(/\D/g,'').length < 10) return authMsg('Please enter a valid mobile number.');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try{
+    if(otpMode === 'link' && me)      await window.startLinkOtp(phone, 'recap-holder');
+    else if(otpMode === 'verify')     await window.startLoginOtp(phone, 'recap-holder');
+    else                              await window.sendOtp(phone, 'recap-holder');
+    authView('otp');
+    document.getElementById('au-sub').textContent = 'Code sent to '+phone;
+    startOtpTimer();
+    const first = document.querySelector('#otp-boxes input');
+    if(first) first.focus();
+  }catch(e){ authMsg(authError(e)); }
+  finally{ btn.disabled=false; btn.textContent='Send OTP'; }
+}
+function otpValue(){
+  return [...document.querySelectorAll('#otp-boxes input')].map(i=>i.value.trim()).join('');
+}
+async function doVerifyOtp(btn){
+  const code = otpValue();
+  if(code.length !== 6) return authMsg('Please enter all six digits.');
+  btn.disabled = true; btn.textContent = 'Verifying…';
+  try{
+    const name = document.getElementById('au-p-name').value.trim();
+    let u;
+    if(otpMode === 'link' && me)       u = await window.confirmLinkOtp(code);
+    else if(otpMode === 'verify')      u = await window.confirmLoginOtp(code, me ? me.uid : null);
+    else                               u = await window.verifyOtp(code, name);
+    clearInterval(otpTimer);
+    markOtpOk(u ? u.uid : (me && me.uid));
+    toast('Number verified');
+    if(pendingBuy){ closeAuth(); runPending(); }
+    else if(otpMode === 'link' && !(me && me.email)){
+      authView('setpw'); authMsg('Verified. You can set a password now, or skip.', 'ok');
+    } else {
+      closeAuth(); toast('Welcome');
+    }
+  }catch(e){ authMsg(authError(e)); }
+  finally{ btn.disabled=false; btn.textContent='Verify & Continue'; }
+}
+function startOtpTimer(){
+  clearInterval(otpTimer);
+  let left = 60;
+  const el = document.getElementById('otp-timer');
+  const tick = ()=>{
+    if(left<=0){
+      clearInterval(otpTimer);
+      el.innerHTML = '<button class="au-link" onclick="authView(\'phone\')">Didn\'t get it? Send again</button>';
+      return;
+    }
+    el.textContent = 'You can request a new code in '+left+'s';
+    left--;
+  };
+  tick(); otpTimer = setInterval(tick, 1000);
+}
+async function doSetPassword(btn){
+  const a = document.getElementById('au-sp-1').value;
+  const b = document.getElementById('au-sp-2').value;
+  if(a.length < 6) return authMsg('Password must be at least 6 characters.');
+  if(a !== b) return authMsg('The two passwords do not match.');
+  btn.disabled = true;
+  try{
+    const email = (meProfile && meProfile.email) || (me && me.email) || '';
+    await window.setPasswordAfterOtp(email, a);
+    authMsg('Password saved.', 'ok');
+    setTimeout(()=>{ closeAuth(); runPending(); }, 1100);
+  }catch(e){ authMsg(authError(e)); }
+  finally{ btn.disabled=false; }
+}
+
+function authError(e){
+  const code = (e && e.code) || '';
+  const map = {
+    'auth/email-already-in-use':'That email already has an account. Try signing in instead.',
+    'auth/invalid-email':'That email address does not look right.',
+    'auth/weak-password':'Password must be at least 6 characters.',
+    'auth/user-not-found':'No account found for that email.',
+    'auth/wrong-password':'Incorrect password.',
+    'auth/invalid-credential':'Incorrect email or password.',
+    'auth/too-many-requests':'Too many attempts. Please wait a few minutes and try again.',
+    'auth/invalid-phone-number':'That mobile number does not look right.',
+    'auth/invalid-verification-code':'That code is not right. Please check and try again.',
+    'auth/code-expired':'That code has expired. Please request a new one.',
+    'auth/requires-recent-login':'Please sign in again before changing your password.',
+    'auth/operation-not-allowed':'This sign-in method is not switched on in Firebase yet.',
+    'auth/credential-already-in-use':'That number is already linked to another account.',
+    'auth/quota-exceeded':'SMS limit reached. Please try again later or use email.',
+    'auth/uid-mismatch':'That number belongs to a different account. Please use the number registered to this one.',
+    'auth/provider-already-linked':'A number is already linked to this account.',
+    'auth/account-exists-with-different-credential':'That number is already registered. Try signing in with it instead.',
+    'auth/no-otp-pending':'Please request a code first.',
+    'auth/recaptcha-failed':'Security check failed. Please reload the page and try again.',
+  };
+  if(map[code]) return map[code];
+  if(code) return 'Could not complete that ('+esc(code)+').';
+  return 'Something went wrong. Please try again.';
+}
+
+// ── Header account button ──
+function acctClick(){
+  if(!me){ authView('main'); authTab('login'); openAuth(); return; }
+  document.getElementById('acct-panel').classList.toggle('open');
+}
+function closeAcct(){ const p=document.getElementById('acct-panel'); if(p) p.classList.remove('open'); }
+document.addEventListener('click', e=>{
+  const btn = document.getElementById('acct-btn');
+  const panel = document.getElementById('acct-panel');
+  if(!btn || !panel) return;
+  if(!btn.contains(e.target) && !panel.contains(e.target)) closeAcct();
+});
+
+function paintAccount(){
+  const label = document.getElementById('acct-label');
+  if(!label) return;
+  if(!me){ label.textContent = 'Sign In'; closeAcct(); return; }
+  const nm = (meProfile && meProfile.name) || me.displayName || me.email || me.phoneNumber || 'Account';
+  label.textContent = nm.split(' ')[0];
+  document.getElementById('acct-n').textContent = nm;
+  document.getElementById('acct-e').textContent = me.email || me.phoneNumber || '';
+  const v = document.getElementById('acct-verify');
+  if(v){
+    v.innerHTML = (me.email && !me.emailVerified)
+      ? '<div class="verify-warn">Your email isn\'t verified yet. <button class="au-link" style="font-size:.72rem" onclick="doResend()">Send the link again</button></div>'
+      : '';
+  }
+}
+async function doResend(){
+  try{ await window.resendVerify(); toast('Verification email sent'); }
+  catch(e){ toast('Could not send right now'); }
+}
+
+// Firebase tells us who is signed in
+window.__onAuth = async function(u, isAdmin){
+  me = u || null;
+  meProfile = u ? await window.custLoadProfile(u.uid) : null;
+  if(u) loadOtpOk(u.uid); else otpOk = false;
+  paintAccount();
+};
+
+// ── My Orders ──
+async function openMyOrders(){
+  closeAcct();
+  if(!me) return;
+  const body = document.getElementById('mo-body');
+  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink-soft)">Loading…</div>';
+  document.getElementById('mo-modal').classList.add('open');
+  let list = [];
+  try{ list = await window.loadMyOrdersFB(me.uid); }catch(e){}
+  if(!list.length){
+    body.innerHTML = '<div style="text-align:center;padding:36px 20px;color:var(--ink-soft)">'
+      + '<div style="font-size:2.2rem;margin-bottom:10px">📦</div>No orders yet.</div>';
+    return;
+  }
+  body.innerHTML = list.map(o=>{
+    const d = o.ts ? new Date(o.ts).toLocaleString() : '';
+    const items = (o.items||[]).map(i=>'• '+esc(i.name)+' × '+esc(i.qty)).join('<br>');
+    const status = o.status==='done' ? 'Dispatched' : 'Being prepared';
+    return '<div style="border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px">'
+      + '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">'
+      + '<strong style="font-size:.86rem;color:var(--ink)">'+money(o.total, o.currency)+'</strong>'
+      + '<span style="font-size:.72rem;color:var(--ink-soft)">'+esc(d)+'</span></div>'
+      + '<div style="font-size:.8rem;color:var(--ink-soft);line-height:1.6">'+items+'</div>'
+      + '<div style="margin-top:9px;font-size:.72rem;color:var(--gold-t);font-weight:700">'+status+'</div>'
+      + (o.paymentId?'<div style="margin-top:5px;font-size:.68rem;color:var(--ink-soft);font-family:\'Fira Mono\',monospace">'+esc(o.paymentId)+'</div>':'')
+      + '</div>';
+  }).join('');
+}
+function closeMyOrders(){ document.getElementById('mo-modal').classList.remove('open'); }
+
+
+// ═══════════════ REGION → CURRENCY ═══════════════
+// No server, so we infer from the browser's own timezone and language.
+// Timezone is the strongest signal available client-side: a VPN doesn't change
+// it, and it needs no network call. It is NOT infallible — someone travelling,
+// or with a misconfigured clock, will be read wrong. That is why the switch
+// stays reachable rather than being welded shut.
+function detectRegion(){
+  try{
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').toLowerCase();
+    if(tz === 'asia/kolkata' || tz === 'asia/calcutta') return 'IN';
+    if(tz){
+      // any other resolved timezone means they're not in India
+      const langs = (navigator.languages || [navigator.language || '']).join(',').toLowerCase();
+      if(/-in\b/.test(langs) && tz.startsWith('asia/')) return 'IN';
+      return 'INTL';
+    }
+  }catch(e){}
+  // no timezone at all → fall back to language
+  try{
+    const langs = (navigator.languages || [navigator.language || '']).join(',').toLowerCase();
+    if(/-in\b/.test(langs)) return 'IN';
+  }catch(e){}
+  return 'IN';   // default to home market rather than charging someone $ by mistake
+}
+let region = 'IN';
+
+function applyRegion(){
+  region = detectRegion();
+  const inrBtn = document.getElementById('cur-INR');
+  const hint = document.getElementById('cur-hint');
+  // International visitors see dollars only.
+  if(region === 'INTL'){
+    if(inrBtn) inrBtn.style.display = 'none';
+    if(hint) hint.style.display = '';
+  } else {
+    if(inrBtn) inrBtn.style.display = '';
+    if(hint) hint.style.display = 'none';
+  }
+}
+// escape hatch for anyone we've read wrong
+function showInr(){
+  region = 'IN';
+  const b = document.getElementById('cur-INR'); if(b) b.style.display='';
+  const h = document.getElementById('cur-hint'); if(h) h.style.display='none';
+  setCurrency('INR');
+  toast('Showing Indian Rupees — delivery within India');
+}
+
+// ── Delivery scope ──
+// ₹ orders ship inside India only. $ orders ship anywhere, India included.
+function shipScope(){ return currency === 'INR' ? 'IN' : 'WORLD'; }
+
+const COUNTRIES = ["India","United States","United Kingdom","United Arab Emirates","Canada","Australia",
+  "Singapore","Malaysia","Germany","France","Netherlands","New Zealand","Ireland","Italy","Spain",
+  "Qatar","Kuwait","Oman","Bahrain","Saudi Arabia","South Africa","Japan","Switzerland","Sweden","Other"];
+
+function buildCountry(){
+  const sel = document.getElementById('co-country');
+  if(!sel) return;
+  const keep = sel.value;
+  if(currency === 'INR'){
+    sel.innerHTML = '<option value="India">India</option>';
+    sel.value = 'India';
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+    sel.innerHTML = COUNTRIES.map(x=>`<option value="${escA(x)}">${esc(x)}</option>`).join('');
+    sel.value = (keep && COUNTRIES.includes(keep)) ? keep : (region==='IN' ? 'India' : 'United States');
+  }
+  updateShipNote();
+}
+function updateShipNote(){
+  const n = document.getElementById('co-ship-note');
+  if(!n) return;
+  n.className = 'ship-note';
+  n.innerHTML = currency === 'INR'
+    ? '🇮🇳 <strong>Paying in ₹ — we deliver within India only.</strong> Shipping abroad? Switch to <button class="au-link" style="font-size:.74rem" onclick="toUsd()">$ USD</button> and the full country list opens up.'
+    : '🌍 <strong>Paying in $ — we can deliver worldwide, India included.</strong> International orders may attract customs duty, which is payable by you.';
+}
+function toUsd(){ setCurrency('USD'); buildCountry(); toast('Switched to US Dollars'); }
+
 // ═══════════════ CART ═══════════════
 function openCart(){ document.getElementById('cart').classList.add('open'); document.getElementById('cart-overlay').classList.add('open'); }
 function closeCart(){ document.getElementById('cart').classList.remove('open'); document.getElementById('cart-overlay').classList.remove('open'); }
@@ -1798,6 +2564,7 @@ function closeCart(){ document.getElementById('cart').classList.remove('open'); 
 function addToCart(pid, quiet){
   const p = products.find(x=>x.id===pid);
   if(!p||p.qty===0) return;
+  if(!requireAuth(()=>addToCart(pid, quiet))) return;
   const s = getSelSize(p);
   const cid = pid+'_'+s.label;
   const ex = cart.find(x=>x.id===cid);
@@ -1811,6 +2578,7 @@ function addToCart(pid, quiet){
 function addComboToCart(cid, quiet){
   const c = combos.find(x=>x.id===cid);
   if(!c) return;
+  if(!requireAuth(()=>addComboToCart(cid, quiet))) return;
   const id = 'combo_'+c.id;
   const ex = cart.find(x=>x.id===id);
   if(ex) ex.qty++;
@@ -1910,6 +2678,7 @@ function cartTotals(){
 
 
 function buyCombo(id){
+  if(!requireAuth(()=>buyCombo(id))) return;
   addComboToCart(id, true);   // quiet — skip the drawer
   checkout();
 }
@@ -1918,12 +2687,28 @@ function buyCombo(id){
 function buyNow(id){
   const p = products.find(x=>x.id===id);
   if(!p || p.qty===0){ toast('Sold out'); return; }
+  if(!requireAuth(()=>buyNow(id))) return;
   addToCart(id, true);          // quiet — no cart drawer
   checkout();                   // opens the details modal
 }
 
+
+function prefillCheckout(){
+  if(!me) return;
+  const set = (id,val)=>{ const e=document.getElementById(id); if(e && !e.value && val) e.value=val; };
+  set('co-name', (meProfile&&meProfile.name) || me.displayName || '');
+  set('co-email', me.email || (meProfile&&meProfile.email) || '');
+  set('co-phone', me.phoneNumber || (meProfile&&meProfile.phone) || '');
+  if(meProfile){
+    set('co-addr', meProfile.address||'');
+    set('co-city', meProfile.city||'');
+    set('co-pin', meProfile.pin||'');
+  }
+}
+
 function checkout(){
   if(!cart.length){ toast('Your cart is empty'); return; }
+  if(!requireAuth(()=>checkout())) return;
   if(!store.rzpKey){
     alert('Payment is not set up yet.\n\nThe store owner needs to add their Razorpay Key ID in Admin → Delivery & Payment.');
     return;
@@ -1935,6 +2720,8 @@ function checkout(){
     + '<div class="csum-row"><span>Delivery</span><span>'+(t.del===0?'FREE':money(t.del))+'</span></div>'
     + '<div class="csum-row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-weight:800"><span>Total</span><span>'+money(t.total)+'</span></div>';
   closeCart();
+  prefillCheckout();
+  buildCountry();
   document.getElementById('co-modal').classList.add('open');
 }
 function closeCheckout(){ document.getElementById('co-modal').classList.remove('open'); }
@@ -1942,10 +2729,25 @@ function closeCheckout(){ document.getElementById('co-modal').classList.remove('
 function payNow(){
   const v = id => (document.getElementById(id)?.value||'').trim();
   const cust = { name:v('co-name'), phone:v('co-phone'), email:v('co-email'),
-                 address:v('co-addr'), city:v('co-city'), pin:v('co-pin'), notes:v('co-notes') };
+                 address:v('co-addr'), city:v('co-city'), pin:v('co-pin'),
+                 country:v('co-country')||'India', notes:v('co-notes') };
   if(!cust.name || !cust.phone || !cust.email || !cust.address || !cust.city || !cust.pin){
     toast('Please fill all required fields');
     return;
+  }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cust.email)){ toast('Please enter a valid email address'); return; }
+  // ₹ ships to India only. $ ships anywhere.
+  if(currency === 'INR' && cust.country !== 'India'){
+    toast('₹ orders deliver within India only — switch to $ for ' + cust.country);
+    return;
+  }
+  if(cust.country === 'India' && !/^\d{6}$/.test(cust.pin)){
+    toast('Indian PIN codes are 6 digits');
+    return;
+  }
+  const mustard = cart.some(i=>/mustard/i.test(i.name||''));
+  if(mustard && cust.country !== 'India'){
+    if(!confirm('Heads up — mustard oil is restricted for food use in several countries (including the US, and parts of the EU and Canada).\n\nYour parcel could be held or refused by customs, and we cannot refund a seizure.\n\nContinue anyway?')) return;
   }
   const t = cartTotals();
   const items = cart.map(i=>({ name:i.name, qty:i.qty, unit:priceOf(i), line:priceOf(i)*i.qty }));
@@ -1956,9 +2758,10 @@ function payNow(){
     name: store.storeName||'Sunsa Organics',
     description: cart.map(i=>i.name).join(', ').slice(0,240),
     prefill: { name:cust.name, email:cust.email, contact:cust.phone },
-    notes: { address: cust.address+', '+cust.city+' '+cust.pin },
+    notes: { address: cust.address+', '+cust.city+' '+cust.pin+', '+cust.country },
     handler: async function(r){
       const order = {
+        uid: me ? me.uid : null,
         ts: Date.now(),
         paymentId: r.razorpay_payment_id || '',
         currency, items,
@@ -3077,6 +3880,27 @@ function buildInquiries(){
 }
 </script>
 <script>
+
+// OTP boxes: type once, jump to the next; paste the whole code at once
+(function(){
+  const boxes = document.querySelectorAll('#otp-boxes input');
+  boxes.forEach((b,i)=>{
+    b.addEventListener('input', ()=>{
+      b.value = b.value.replace(/\D/g,'').slice(0,1);
+      if(b.value && i<boxes.length-1) boxes[i+1].focus();
+    });
+    b.addEventListener('keydown', e=>{
+      if(e.key==='Backspace' && !b.value && i>0) boxes[i-1].focus();
+    });
+    b.addEventListener('paste', e=>{
+      e.preventDefault();
+      const t = (e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6);
+      t.split('').forEach((ch,n)=>{ if(boxes[n]) boxes[n].value=ch; });
+      if(t.length) boxes[Math.min(t.length,5)].focus();
+    });
+  });
+})();
+
 // ═══════════════ SCROLL REVEAL ═══════════════
 let __revealObs = null;
 function observeReveals(){
@@ -3132,6 +3956,12 @@ function loadCache(){
 (function init(){
   loadCache();
 
+  // Where in the world are they? Indians get ₹, everyone else gets $.
+  // A previously saved choice always wins over our guess.
+  if(!currencyChosen) currency = (detectRegion()==='IN') ? 'INR' : 'USD';
+  applyRegion();
+  buildCountry();
+
   // Currency buttons
   document.getElementById('cur-INR').classList.toggle('on', currency==='INR');
   document.getElementById('cur-USD').classList.toggle('on', currency==='USD');
@@ -3154,7 +3984,7 @@ function loadCache(){
 
   // Close product modal on Escape
   document.addEventListener('keydown', e=>{
-    if(e.key==='Escape'){ closePD(); closeCart(); closeCheckout(); closeOK(); }
+    if(e.key==='Escape'){ closePD(); closeCart(); closeCheckout(); closeOK(); closeAuth(); closeMyOrders(); closeAcct(); }
   });
 
   // Hide loader
