@@ -322,25 +322,95 @@ img{max-width:100%;display:block;}
 #toast.show{transform:translateX(-50%) translateY(0);}
 
 /* ─── LOADER ─── */
-#loader{position:fixed;inset:0;background:var(--char);z-index:100000;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:22px;transition:opacity .7s ease;}
+#loader{position:fixed;inset:0;background:#1b2c20;z-index:100000;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  transition:opacity .9s ease;}
 #loader.hide{opacity:0;pointer-events:none;}
-.loader-mark{width:82px;height:86px;position:relative;}
-.loader-mark svg{width:100%;height:100%;overflow:visible;}
-/* 211.3 is the measured length of the droplet path — must match or the outline won't close */
-.drop-draw{stroke-dasharray:212;stroke-dashoffset:212;animation:dropDraw 2.2s ease-in-out infinite;}
-@keyframes dropDraw{0%{stroke-dashoffset:212;}55%,100%{stroke-dashoffset:0;}}
-.drop-sun{opacity:0;transform-box:fill-box;transform-origin:center;animation:dropSun 2.2s ease-in-out infinite;}
-@keyframes dropSun{0%,40%{opacity:0;transform:scale(.55);}72%,100%{opacity:1;transform:scale(1);}}
-@media(prefers-reduced-motion:reduce){
-  .drop-draw{animation:none;stroke-dashoffset:0;}
-  .drop-sun{animation:none;opacity:1;transform:none;}
-}
-.loader-txt{font-family:'Fraunces',serif;color:var(--cream);font-size:1.5rem;letter-spacing:.28em;text-transform:uppercase;font-weight:500;}
-.loader-bar{width:180px;height:2px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden;}
-.loader-fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-l));animation:fill 1.6s ease forwards;}
-@keyframes fill{to{width:100%;}}
 
+/* The horizontal centre line */
+.ld-line{position:absolute;top:50%;left:0;right:0;height:1.5px;
+  background:rgba(215,165,42,.18);transform:translateY(-50%);}
+
+/* Drop itself — falls from -100px to 50vh */
+.ld-drop{position:absolute;left:50%;top:0;transform:translateX(-50%);
+  width:44px;height:56px;}
+.ld-drop svg{width:100%;height:100%;}
+
+/* Ripple ring — centred on the line */
+.ld-ripple{position:absolute;top:50%;left:50%;
+  width:0;height:0;border-radius:50%;
+  border:2px solid rgba(215,165,42,.6);
+  transform:translate(-50%,-50%);}
+
+/* Splash lines — 6 short lines that shoot outward */
+
+
+
+/* Logo fades in after impact */
+
+
+
+
+
+/* Animations */
+@keyframes ldFall{
+  0%  {top:-60px;animation-timing-function:cubic-bezier(.4,0,1,1);}
+  72% {top:calc(50% - 28px);animation-timing-function:cubic-bezier(0,0,.2,1);}
+  80% {top:calc(50% - 10px);}
+  86% {top:calc(50% - 26px);}
+  92% {top:calc(50% - 14px);}
+  96% {top:calc(50% - 22px);}
+  100%{top:calc(50% - 20px);opacity:0;}
+}
+@keyframes ldSquish{
+  0%,71%{transform:translateX(-50%) scaleX(1) scaleY(1);}
+  76%   {transform:translateX(-50%) scaleX(1.55) scaleY(.45);}
+  83%   {transform:translateX(-50%) scaleX(.85) scaleY(1.18);}
+  90%   {transform:translateX(-50%) scaleX(1.08) scaleY(.94);}
+  100%  {transform:translateX(-50%) scaleX(1) scaleY(1);opacity:0;}
+}
+@keyframes ldRipple1{
+  0%{width:0;height:0;opacity:.7;}
+  100%{width:260px;height:24px;border-radius:50%;opacity:0;}
+}
+@keyframes ldRipple2{
+  0%{width:0;height:0;opacity:.5;}
+  100%{width:180px;height:16px;border-radius:50%;opacity:0;}
+}
+
+
+
+
+
+/* Particles — 12 dots fly 360° */
+.ld-particles{position:absolute;top:50%;left:50%;width:0;height:0;}
+.ld-pt{position:absolute;width:5px;height:5px;border-radius:50%;
+  background:#d7a52a;opacity:0;top:-2.5px;left:-2.5px;}
+
+/* Name — single horizontal line, letters stagger in */
+.ld-name{position:absolute;top:calc(50% + 56px);left:50%;
+  transform:translateX(-50%);display:flex;align-items:center;
+  gap:0;white-space:nowrap;}
+.ld-letter{font-family:'Fraunces',serif;color:#faedcd;font-size:1.35rem;
+  font-weight:500;letter-spacing:.28em;text-transform:uppercase;
+  opacity:0;transform:translateY(10px);display:inline-block;}
+
+/* Particle keyframe — translates outward then fades */
+@keyframes ptFly{
+  0%  {opacity:1;transform:translate(var(--tx0),var(--ty0));}
+  70% {opacity:.9;}
+  100%{opacity:0;transform:translate(var(--txf),var(--tyf));}
+}
+/* Letter keyframe */
+@keyframes letterIn{
+  0%  {opacity:0;transform:translateY(8px);}
+  100%{opacity:1;transform:translateY(0);}
+}
+@media(prefers-reduced-motion:reduce){
+  .ld-drop{top:calc(50% - 56px)!important;}
+  .ld-pt{display:none;}
+  .ld-letter{opacity:1!important;transform:none!important;animation:none!important;}
+}
 /* ═══════════ HEADER (static #386641) ═══════════ */
 header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
   background:var(--head);display:flex;align-items:center;justify-content:space-between;
@@ -1258,30 +1328,28 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
 
 <!-- LOADER -->
 <div id="loader">
-  <div class="loader-mark">
-    <svg viewBox="0 0 100 105" fill="none" aria-hidden="true">
-      <!-- droplet outline draws itself -->
-      <path class="drop-draw" d="M50 12 C50 12 78 46 78 66 A28 28 0 1 1 22 66 C22 46 50 12 50 12 Z"
-            fill="none" stroke="#cfa350" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <!-- sun fades in at its heart -->
-      <g class="drop-sun">
-        <g stroke="#cfa350" stroke-width="1.5" stroke-linecap="round">
-          <line x1="50" y1="52" x2="50" y2="57"/>
-          <line x1="50" y1="79" x2="50" y2="84"/>
-          <line x1="36" y1="68" x2="41" y2="68"/>
-          <line x1="64" y1="68" x2="59" y2="68"/>
-          <line x1="40.5" y1="58.5" x2="44" y2="62"/>
-          <line x1="59.5" y1="77.5" x2="56" y2="74"/>
-          <line x1="40.5" y1="77.5" x2="44" y2="74"/>
-          <line x1="59.5" y1="58.5" x2="56" y2="62"/>
-        </g>
-        <circle cx="50" cy="68" r="7" fill="#cfa350"/>
-      </g>
+  <div class="ld-line"></div>
+
+  <!-- The drop -->
+  <div class="ld-drop" id="ld-drop">
+    <svg viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M22 3 C22 3 41 26 41 37 A19 19 0 1 1 3 37 C3 26 22 3 22 3Z" fill="#d7a52a"/>
+      <path d="M12 32 C11 28 16 22 22 18" stroke="rgba(255,255,255,.25)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
     </svg>
   </div>
-  <div class="loader-txt">Sunsa Organics</div>
-  <div class="loader-bar"><div class="loader-fill"></div></div>
+
+  <!-- Ripple rings -->
+  <div class="ld-ripple" id="ld-r1"></div>
+  <div class="ld-ripple" id="ld-r2"></div>
+
+  <!-- 12 particles equally spaced 360° -->
+  <div class="ld-particles" id="ld-particles"><div class="ld-pt" id="pt0"></div><div class="ld-pt" id="pt1"></div><div class="ld-pt" id="pt2"></div><div class="ld-pt" id="pt3"></div><div class="ld-pt" id="pt4"></div><div class="ld-pt" id="pt5"></div><div class="ld-pt" id="pt6"></div><div class="ld-pt" id="pt7"></div><div class="ld-pt" id="pt8"></div><div class="ld-pt" id="pt9"></div><div class="ld-pt" id="pt10"></div><div class="ld-pt" id="pt11"></div></div>
+
+  <!-- Name reveals letter by letter in one horizontal line -->
+  <div class="ld-name" id="ld-name"><span class="ld-letter" id="ll0">S</span><span class="ld-letter" id="ll1">U</span><span class="ld-letter" id="ll2">N</span><span class="ld-letter" id="ll3">S</span><span class="ld-letter" id="ll4">A</span><span class="ld-letter" id="ll5"> </span><span class="ld-letter" id="ll6">O</span><span class="ld-letter" id="ll7">R</span><span class="ld-letter" id="ll8">G</span><span class="ld-letter" id="ll9">A</span><span class="ld-letter" id="ll10">N</span><span class="ld-letter" id="ll11">I</span><span class="ld-letter" id="ll12">C</span><span class="ld-letter" id="ll13">S</span></div>
 </div>
+
+
 
 <div id="toast"></div>
 
@@ -5210,6 +5278,9 @@ function loadCache(){
   if(fc) fc.textContent = '© '+new Date().getFullYear()+' Sunsa Organics. All rights reserved.';
 
   // Seed Firestore on very first run
+  if(window.seedIfEmpty) window.seedIfEmpty(products, combos, gifts);
+  loadReviewsOnReady();
+})();   // ← end of init()
 
 // ── Load reviews after Firebase is ready (called from init) ──
 function loadReviewsOnReady(){
@@ -5222,20 +5293,114 @@ function loadReviewsOnReady(){
   }
 }
 
-  if(window.seedIfEmpty) window.seedIfEmpty(products, combos, gifts);
-  loadReviewsOnReady();
-
   // Close product modal on Escape
   document.addEventListener('keydown', e=>{
     if(e.key==='Escape'){ closePD(); closeCart(); closeCheckout(); closeOK(); closeAuth(); closeMyOrders(); closeAcct(); closeReviewForm(); }
   });
 
-  // Hide loader
-  window.addEventListener('load', ()=>{
-    setTimeout(()=>{ const l=document.getElementById('loader'); if(l) l.classList.add('hide'); }, 1000);
-  });
-  // Fallback in case load already fired
-  setTimeout(()=>{ const l=document.getElementById('loader'); if(l) l.classList.add('hide'); }, 2800);
+  // ── Loader animation ──
+// Phase 1 (0→660ms):  Drop falls from top to centre line
+// Phase 2 (660ms):    Impact — squish, 12 particles shatter 360°, ripples expand
+// Phase 3 (800ms):    "SUNSA ORGANICS" reveals letter by letter on one line
+// Phase 4 (2400ms):   Whole loader fades out
+(function runLoader(){
+  var drop    = document.getElementById('ld-drop');
+  var r1      = document.getElementById('ld-r1');
+  var r2      = document.getElementById('ld-r2');
+  var ptWrap  = document.getElementById('ld-particles');
+  var nameEl  = document.getElementById('ld-name');
+  var loader  = document.getElementById('loader');
+  if(!drop || !loader) return;
+
+  // ── Pre-set 12 particles equally at 30° intervals ──
+  // Each particle starts at the impact point and flies outward
+  var pts = document.querySelectorAll('.ld-pt');
+  var N = pts.length;   // 12
+  for(var i=0;i<N;i++){
+    var angleDeg = (360/N)*i;               // 0, 30, 60 … 330
+    var angleRad = angleDeg * Math.PI/180;
+    // Fly distance — vary slightly so they don't all land on the same ring
+    var dist = 55 + (i%3)*18;               // 55, 73, 91, 55, 73, 91 …
+    var tx = Math.round(Math.sin(angleRad)*dist);
+    var ty = Math.round(-Math.cos(angleRad)*dist);  // negative = up
+    // Sizes: alternate small/large for visual texture
+    var sz = (i%2===0) ? '5px' : '4px';
+    pts[i].style.cssText =
+      'position:absolute;border-radius:50%;background:#d7a52a;opacity:0;'
+      +'top:-2.5px;left:-2.5px;width:'+sz+';height:'+sz+';'
+      +'--tx0:0px;--ty0:0px;'
+      +'--txf:'+tx+'px;--tyf:'+ty+'px;';
+  }
+
+  // ── PHASE 1: Drop falls ──
+  drop.style.cssText = 'position:absolute;left:50%;top:-70px;'
+    +'transform:translateX(-50%) scaleX(1) scaleY(1);'
+    +'width:44px;height:56px;transition:none;';
+
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+    drop.style.transition = 'top 0.63s cubic-bezier(.4,.0,.6,1)';
+    drop.style.top = 'calc(50% - 56px)';
+  }); });
+
+  // ── PHASE 2: Impact ──
+  setTimeout(function(){
+
+    // Squish
+    drop.style.transition = 'transform 0.11s cubic-bezier(.36,.07,.19,.97)';
+    drop.style.transform  = 'translateX(-50%) scaleX(1.7) scaleY(0.3)';
+
+    // Ripples expand outward from the line
+    r1.style.cssText = 'position:absolute;top:50%;left:50%;border-radius:50%;'
+      +'border:2px solid rgba(215,165,42,.65);'
+      +'width:0;height:0;animation:ldRipple1 0.72s ease-out forwards;';
+    r2.style.cssText = 'position:absolute;top:50%;left:50%;border-radius:50%;'
+      +'border:1.5px solid rgba(215,165,42,.35);'
+      +'width:0;height:0;animation:ldRipple2 0.96s 0.08s ease-out forwards;';
+
+    // Fire all 12 particles simultaneously in all directions
+    for(var i=0;i<N;i++){
+      var delay = (i%3)*0.025;  // tiny stagger (0, 0.025, 0.05) so they don't look robotic
+      pts[i].style.animation = 'ptFly 0.55s '+delay+'s cubic-bezier(0,.6,.4,1) forwards';
+    }
+
+  }, 660);
+
+  // Un-squish with slight bounce
+  setTimeout(function(){
+    drop.style.transition = 'transform 0.18s cubic-bezier(.34,1.56,.64,1)';
+    drop.style.transform  = 'translateX(-50%) scaleX(1) scaleY(1)';
+  }, 780);
+
+  // Drop fades out
+  setTimeout(function(){
+    drop.style.transition = 'opacity 0.18s ease';
+    drop.style.opacity    = '0';
+  }, 850);
+
+  // ── PHASE 3: Letters reveal one by one ──
+  var letters = nameEl ? nameEl.querySelectorAll('.ld-letter') : [];
+  var letterDelay = 820;   // start right after impact settles
+  var stepMs = 60;         // 60ms between each letter
+  for(var k=0;k<letters.length;k++){
+    (function(el, d){
+      setTimeout(function(){
+        el.style.animation = 'letterIn 0.3s ease forwards';
+      }, d);
+    })(letters[k], letterDelay + k*stepMs);
+  }
+
+  // ── PHASE 4: Loader exits ──
+  function hideLoader(){
+    var l = document.getElementById('loader');
+    if(l) l.classList.add('hide');
+  }
+  var showDuration = letterDelay + letters.length*stepMs + 900;
+  if(document.readyState === 'complete'){
+    setTimeout(hideLoader, showDuration);
+  } else {
+    window.addEventListener('load', function(){ setTimeout(hideLoader, showDuration); });
+  }
+  setTimeout(hideLoader, Math.max(showDuration+400, 4200));  // hard fallback
 })();
 </script>
 
