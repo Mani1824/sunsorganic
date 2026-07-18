@@ -1,4 +1,10 @@
-<!DOCTYPE html>
+<div style="background:#0a1206;border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid #1c2c14">
+            <div style="font-size:.66rem;color:#8a9a7e;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:10px">📲 Social Links</div>
+            <div class="af"><label>Instagram URL</label><input id="b-instagram" placeholder="https://instagram.com/sunsaorganics"></div>
+            <div class="af"><label>Facebook URL</label><input id="b-facebook" placeholder="https://facebook.com/sunsaorganics"></div>
+            <div class="af"><label>YouTube URL</label><input id="b-youtube" placeholder="https://youtube.com/@sunsaorganics"></div>
+          </div>
+    <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -87,24 +93,35 @@ auth.onAuthStateChanged(async u=>{
   if(window.__onAuth) window.__onAuth(u, admin);
 });
 
-window.doLogin = async function(){
-  const email=document.getElementById('al-email').value.trim();
-  const pass=document.getElementById('al-pass').value;
-  const err=document.getElementById('al-err');
-  err.style.display='none';
+// ── Admin login: Google Sign-In only ──
+// The admin panel requires a Google account AND that UID in /admins.
+// No email/password — Google handles authentication, we handle authorisation.
+window.doGoogleLogin = async function(){
+  const errEl = document.getElementById('al-err');
+  errEl.style.display='none';
   try{
-    const cred = await auth.signInWithEmailAndPassword(email,pass);
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    const cred = await auth.signInWithPopup(provider);
     if(!(await window.isAdminUid(cred.user.uid))){
       await auth.signOut();
-      err.textContent='That account is not an administrator.';
-      err.style.display='block';
-      document.getElementById('al-pass').value='';
+      errEl.textContent = 'That Google account ('+(cred.user.email||'')+') is not listed as an admin.\n'
+        +'Add it to /admins in your Firestore console.';
+      errEl.style.display='block';
       return;
     }
     closeLogin(); openAdmin();
   }
-  catch(e){ err.textContent='Incorrect email or password.'; err.style.display='block'; document.getElementById('al-pass').value=''; }
+  catch(e){
+    if(e.code==='auth/popup-closed-by-user') return;   // user cancelled — don't show an error
+    errEl.textContent = e.code==='auth/popup-blocked'
+      ? 'Popup was blocked. Allow popups for this site and try again.'
+      : 'Google sign-in failed: '+(e.message||e.code||'unknown error');
+    errEl.style.display='block';
+  }
 };
+// Keep doLogin as a no-op so any stray calls don't crash
+window.doLogin = function(){ window.doGoogleLogin(); };
 window.doLogout = async function(){ await auth.signOut(); closeAdmin(); toast('Logged out'); };
 
 // ── Customer accounts ──
@@ -432,11 +449,11 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 @media(prefers-reduced-motion:reduce){.hero-slide{transition:none;}}
 
 /* ─── TICKER ─── */
-.ticker{background:var(--char);overflow:hidden;height:46px;display:flex;align-items:center;}
+.ticker{background:var(--paper);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;height:44px;display:flex;align-items:center;}
 .ticker-track{display:flex;white-space:nowrap;animation:tick 32s linear infinite;}
 .ticker-item{display:flex;align-items:center;gap:10px;padding:0 34px;font-size:.76rem;font-weight:600;
-  color:rgba(255,255,255,.85);letter-spacing:.1em;text-transform:uppercase;border-right:1px solid rgba(255,255,255,.1);}
-.ticker-item .d{width:5px;height:5px;border-radius:50%;background:var(--gold-l);}
+  color:var(--ink-soft);letter-spacing:.1em;text-transform:uppercase;border-right:1px solid rgba(255,255,255,.1);}
+.ticker-item .d{width:5px;height:5px;border-radius:50%;background:var(--gold-t);}
 @keyframes tick{to{transform:translateX(-50%);}}
 
 /* ─── SECTION SHELL ─── */
@@ -681,6 +698,128 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
   .fnd-img{aspect-ratio:3/2;border-radius:18px 18px 60px 18px;}
 }
 
+
+
+/* ═══════════ SUBSCRIPTION ═══════════ */
+#subscription{background:var(--cream);border-top:1px solid var(--line);}
+.sub-hero{max-width:1300px;margin:0 auto 56px;display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center;}
+.sub-hero-text .sec-title{margin-bottom:16px;}
+.sub-hero-text p{font-size:.96rem;color:var(--ink-soft);line-height:1.8;margin-bottom:22px;}
+.sub-perks{display:flex;flex-direction:column;gap:12px;margin-top:8px;}
+.sub-perk{display:flex;align-items:flex-start;gap:13px;}
+.sub-perk-ic{width:38px;height:38px;border-radius:10px;background:rgba(215,165,42,.14);
+  display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.sub-perk-t{font-size:.84rem;font-weight:700;color:var(--ink);line-height:1.3;}
+.sub-perk-s{font-size:.76rem;color:var(--ink-soft);margin-top:2px;line-height:1.5;}
+.sub-plans{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.sub-plan{background:var(--paper);border:2px solid var(--line);border-radius:20px;padding:26px;
+  cursor:pointer;transition:all .25s;position:relative;}
+.sub-plan:hover{border-color:var(--gold);transform:translateY(-3px);box-shadow:0 14px 36px var(--shadow);}
+.sub-plan.sel{border-color:var(--gold);background:rgba(215,165,42,.04);box-shadow:0 8px 28px rgba(215,165,42,.18);}
+.sub-plan-badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);
+  background:var(--gold);color:var(--ink);font-size:.58rem;font-weight:800;padding:4px 13px;
+  border-radius:20px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
+.sub-plan-freq{font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;font-weight:700;
+  color:var(--gold-t);margin-bottom:8px;}
+.sub-plan-name{font-family:'Fraunces',serif;font-size:1.45rem;font-weight:500;color:var(--ink);margin-bottom:4px;}
+.sub-plan-price{font-size:.82rem;color:var(--ink-soft);line-height:1.5;margin-bottom:10px;}
+.sub-plan-save{display:inline-block;background:rgba(56,102,65,.1);color:var(--forest);
+  font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.04em;}
+@media(max-width:760px){.sub-hero{grid-template-columns:1fr;gap:32px;} .sub-plans{grid-template-columns:1fr;}}
+
+/* Builder */
+.sub-builder{max-width:1300px;margin:0 auto;}
+.sub-builder-head{font-family:'Fraunces',serif;font-size:1.7rem;font-weight:500;color:var(--ink);
+  margin-bottom:6px;letter-spacing:-.01em;}
+.sub-builder-sub{font-size:.86rem;color:var(--ink-soft);margin-bottom:32px;line-height:1.6;}
+.sub-oils{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-bottom:32px;}
+.sub-oil{background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:18px;
+  display:flex;flex-direction:column;gap:10px;transition:border-color .2s,box-shadow .2s;}
+.sub-oil.active{border-color:var(--gold);box-shadow:0 6px 20px rgba(215,165,42,.2);}
+.sub-oil-top{display:flex;align-items:center;gap:11px;}
+.sub-oil-em{width:40px;height:40px;border-radius:10px;background:rgba(215,165,42,.1);
+  display:flex;align-items:center;justify-content:center;font-size:1.2rem;overflow:hidden;flex-shrink:0;}
+.sub-oil-em img{width:100%;height:100%;object-fit:cover;}
+.sub-oil-name{font-size:.88rem;font-weight:700;color:var(--ink);line-height:1.3;}
+.sub-oil-price{font-size:.72rem;color:var(--ink-soft);}
+.sub-oil-ctrl{display:flex;align-items:center;gap:0;border:1.5px solid var(--line);border-radius:30px;
+  overflow:hidden;width:fit-content;}
+.sub-oil-ctrl button{width:32px;height:32px;border:none;background:transparent;font-size:1rem;
+  cursor:pointer;font-weight:700;color:var(--ink);transition:background .15s;display:flex;
+  align-items:center;justify-content:center;}
+.sub-oil-ctrl button:hover{background:rgba(36,58,42,.07);}
+.sub-oil-qty{min-width:32px;text-align:center;font-size:.85rem;font-weight:700;color:var(--ink);}
+.sub-oil-size{width:100%;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;
+  font-size:.78rem;font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);outline:none;}
+.sub-oil-size:focus{border-color:var(--ink);}
+.sub-summary{background:var(--char);border-radius:20px;padding:28px;margin-bottom:20px;
+  display:grid;grid-template-columns:1fr auto;gap:24px;align-items:start;}
+.sub-summary-items{color:rgba(250,237,205,.7);font-size:.82rem;line-height:2;}
+.sub-summary-total{text-align:right;}
+.sub-summary-total .lbl{font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(250,237,205,.5);margin-bottom:4px;}
+.sub-summary-total .amt{font-family:'Fraunces',serif;font-size:2rem;font-weight:500;color:var(--gold);}
+.sub-summary-total .freq{font-size:.74rem;color:rgba(250,237,205,.5);margin-top:2px;}
+.sub-summary-total .saving{font-size:.72rem;color:#8fb573;margin-top:5px;font-weight:600;}
+@media(max-width:640px){.sub-summary{grid-template-columns:1fr;} .sub-summary-total{text-align:left;}}
+.sub-cta-row{display:flex;gap:12px;flex-wrap:wrap;}
+.sub-enq-btn{flex:1;min-width:220px;padding:15px 24px;background:var(--gold);color:var(--ink);
+  border:none;border-radius:14px;font-size:.9rem;font-weight:700;cursor:pointer;
+  font-family:'Inter',sans-serif;transition:all .25s;box-shadow:0 6px 20px rgba(215,165,42,.3);}
+.sub-enq-btn:hover{background:var(--gold-d);transform:translateY(-2px);}
+.sub-enq-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+.sub-note-txt{font-size:.72rem;color:var(--ink-soft);line-height:1.65;padding:12px 0;}
+
+/* ═══════════ REVIEWS ═══════════ */
+#reviews{background:var(--cream-deep);border-top:1px solid var(--line);}
+.rev-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;max-width:1300px;margin:0 auto 30px;}
+.rev-card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:24px;
+  display:flex;flex-direction:column;gap:12px;transition:transform .3s,box-shadow .3s;}
+.rev-card:hover{transform:translateY(-4px);box-shadow:0 14px 36px var(--shadow);}
+.rev-stars{display:flex;gap:3px;font-size:1rem;}
+.rev-star{color:#c8c0b0;}
+.rev-star.on{color:var(--gold);}
+.rev-quote{font-size:.88rem;color:var(--ink);line-height:1.7;flex:1;position:relative;padding-left:18px;}
+.rev-quote::before{content:'"';position:absolute;left:0;top:-4px;font-family:'Fraunces',serif;
+  font-size:2rem;color:var(--gold);opacity:.35;line-height:1;}
+.rev-who{display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--line);}
+.rev-av{width:36px;height:36px;border-radius:50%;background:rgba(56,102,65,.12);display:flex;
+  align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:var(--forest);
+  flex-shrink:0;overflow:hidden;}
+.rev-av img{width:100%;height:100%;object-fit:cover;}
+.rev-name{font-size:.82rem;font-weight:700;color:var(--ink);}
+.rev-meta{font-size:.68rem;color:var(--ink-soft);margin-top:2px;}
+.rev-product{display:inline-block;font-size:.62rem;background:rgba(215,165,42,.13);color:var(--gold-t);
+  border-radius:20px;padding:3px 9px;font-weight:600;letter-spacing:.04em;margin-top:4px;}
+.rev-verified{display:inline-flex;align-items:center;gap:4px;font-size:.62rem;color:var(--forest);
+  font-weight:600;margin-top:3px;}
+.rev-cta{text-align:center;margin-top:10px;}
+.rev-leave-btn{padding:13px 30px;background:var(--ink);color:var(--cream);border:none;border-radius:30px;
+  font-size:.86rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .25s;}
+.rev-leave-btn:hover{background:var(--char);transform:translateY(-2px);}
+.rev-modal-inner{background:var(--paper);border-radius:22px;max-width:480px;width:100%;padding:30px;
+  max-height:90vh;overflow-y:auto;box-shadow:0 30px 80px rgba(0,0,0,.28);}
+.rev-modal-inner h3{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:500;color:var(--ink);margin-bottom:4px;}
+.rev-modal-inner .sub{font-size:.78rem;color:var(--ink-soft);margin-bottom:20px;}
+.star-picker{display:flex;gap:6px;margin-bottom:4px;}
+.star-picker span{font-size:1.6rem;cursor:pointer;transition:transform .15s;color:#c8c0b0;user-select:none;}
+.star-picker span.on{color:var(--gold);}
+.star-picker span:hover{transform:scale(1.25);}
+.rev-f{margin-bottom:14px;}
+.rev-f label{display:block;font-size:.66rem;font-weight:700;color:var(--ink-soft);
+  letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+.rev-f input,.rev-f textarea,.rev-f select{width:100%;padding:11px 13px;border:1.5px solid var(--line);
+  border-radius:10px;font-size:.88rem;font-family:'Inter',sans-serif;background:var(--paper);
+  color:var(--ink);outline:none;transition:border-color .2s;}
+.rev-f input:focus,.rev-f textarea:focus{border-color:var(--ink);}
+.rev-submit{width:100%;padding:13px;background:var(--gold);color:var(--ink);border:none;
+  border-radius:11px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;
+  transition:all .25s;margin-top:4px;}
+.rev-submit:hover{background:var(--gold-d);transform:translateY(-1px);}
+.rev-submit:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+.rev-pending{background:rgba(215,165,42,.1);border:1px solid var(--gold);border-radius:10px;
+  padding:10px 13px;font-size:.76rem;color:var(--gold-t);line-height:1.55;margin-top:12px;display:none;}
+
 /* ═══════════ TESTIMONIALS ═══════════ */
 #testi{background:var(--cream);}
 .tst-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:1300px;margin:0 auto;}
@@ -804,6 +943,14 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .wa-btn:hover{background:#1eb955;transform:translateY(-2px);}
 
 /* ═══════════ FOOTER ═══════════ */
+.foot-social{display:flex;gap:10px;margin-top:18px;margin-bottom:16px;}
+.fsoc{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;
+  background:rgba(250,237,205,.08);color:rgba(250,237,205,.5);border:1px solid rgba(250,237,205,.12);
+  transition:all .25s;text-decoration:none;}
+.fsoc:hover{background:rgba(250,237,205,.16);color:var(--cream);border-color:rgba(250,237,205,.3);
+  transform:translateY(-3px);}
+.fsoc svg{width:17px;height:17px;}
+
 footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(20px,5vw,60px) 30px;}
 .foot-grid{max-width:1300px;margin:0 auto;display:grid;grid-template-columns:1.8fr 1fr 1fr 1.1fr 1fr;gap:36px;margin-bottom:40px;}
 .foot-brand .brand-name{color:var(--cream);}
@@ -961,6 +1108,18 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
 .al-box input{width:100%;padding:13px 15px;border:1.5px solid #223018;border-radius:11px;font-size:.92rem;background:#0a1206;color:#ccc;margin-bottom:12px;outline:none;font-family:'Inter',sans-serif;}
 .al-box input:focus{border-color:var(--forest-l);}
 .al-btn{width:100%;padding:14px;background:var(--forest);color:#fff;border:none;border-radius:11px;font-size:.94rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;}
+.al-logo{font-size:2.4rem;margin-bottom:10px;text-align:center;}
+.al-google-wrap{margin:20px 0 14px;}
+.al-google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:14px 20px;background:#fff;border:1.5px solid #dadce0;border-radius:12px;
+  font-size:.88rem;font-weight:600;color:#3c4043;cursor:pointer;font-family:'Inter',sans-serif;
+  transition:all .22s;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.al-google-btn:hover{background:#f8f9fa;box-shadow:0 4px 14px rgba(0,0,0,.14);transform:translateY(-1px);}
+.al-google-btn:active{transform:translateY(0);}
+.al-note{text-align:center;font-size:.7rem;color:rgba(250,237,205,.45);line-height:1.65;margin-bottom:14px;}
+.al-note strong{color:rgba(250,237,205,.7);}
+.al-err-box{background:rgba(168,68,63,.18);border:1px solid #a8443f;color:#e09090;
+  border-radius:9px;padding:10px 12px;font-size:.78rem;margin-bottom:14px;line-height:1.5;}
 .al-btn:hover{background:var(--forest-l);}
 .al-cancel{width:100%;padding:11px;background:none;border:none;color:#456;font-size:.82rem;cursor:pointer;margin-top:6px;}
 #al-err{color:#e08080;font-size:.8rem;margin-bottom:12px;padding:10px 13px;background:rgba(184,68,63,.12);border-radius:9px;display:none;}
@@ -1371,6 +1530,83 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
   <p class="cmp-note reveal">Refining is a legal, industry-standard process — it makes oil cheap, clear and long-lasting. What it costs you is the nutrition, aroma and character that were in the seed to begin with. That's the trade we don't make.</p>
 </section>
 
+
+<!-- SUBSCRIPTION -->
+<section class="section" id="subscription">
+  <div class="sub-hero">
+    <div class="sub-hero-text reveal">
+      <div class="eyebrow"><span class="line"></span><span>Annual Subscription</span></div>
+      <h2 class="sec-title">Your Oils, <em>Every Month</em></h2>
+      <p>Choose the oils you use, pick your delivery frequency, and we'll ship automatically — every 15 days or every month, for a full year. No running out, no reordering.</p>
+      <div class="sub-perks">
+        <div class="sub-perk">
+          <div class="sub-perk-ic">💰</div>
+          <div><div class="sub-perk-t">Save up to 12% vs single orders</div>
+          <div class="sub-perk-s">Discounted rate locked in for the full subscription year.</div></div>
+        </div>
+        <div class="sub-perk">
+          <div class="sub-perk-ic">🚚</div>
+          <div><div class="sub-perk-t">Free delivery on every shipment</div>
+          <div class="sub-perk-s">No per-order delivery charges across the subscription period.</div></div>
+        </div>
+        <div class="sub-perk">
+          <div class="sub-perk-ic">🔄</div>
+          <div><div class="sub-perk-t">Pause or change anytime</div>
+          <div class="sub-perk-s">Need a different oil or size? Contact us — we'll update your next shipment.</div></div>
+        </div>
+        <div class="sub-perk">
+          <div class="sub-perk-ic">📦</div>
+          <div><div class="sub-perk-t">Same cold-pressed quality, every time</div>
+          <div class="sub-perk-s">Each shipment is freshly pressed and dispatched within 3 days.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="reveal">
+      <div class="sub-plans" id="sub-plan-cards">
+        <div class="sub-plan sel" onclick="selectSubPlan('monthly')" id="splan-monthly">
+          <div class="sub-plan-freq">Every month</div>
+          <div class="sub-plan-name">Monthly</div>
+          <div class="sub-plan-price">12 deliveries a year · <strong>8% off</strong> every order</div>
+          <div class="sub-plan-save">Most flexible</div>
+        </div>
+        <div class="sub-plan" onclick="selectSubPlan('fortnightly')" id="splan-fortnightly">
+          <div class="sub-plan-badge">Best value</div>
+          <div class="sub-plan-freq">Every 15 days</div>
+          <div class="sub-plan-name">Fortnightly</div>
+          <div class="sub-plan-price">24 deliveries a year · <strong>12% off</strong> every order</div>
+          <div class="sub-plan-save">Save the most</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-builder reveal">
+    <div class="sub-builder-head">Build your basket</div>
+    <div class="sub-builder-sub">Pick the oils you want and how many bottles per delivery. You can mix sizes.</div>
+    <div class="sub-oils" id="sub-oil-grid"></div>
+    <div class="sub-summary" id="sub-summary">
+      <div class="sub-summary-items" id="sub-summary-items">Add oils above to see your basket.</div>
+      <div class="sub-summary-total">
+        <div class="lbl">Per delivery</div>
+        <div class="amt" id="sub-total-amt">—</div>
+        <div class="freq" id="sub-total-freq"></div>
+        <div class="saving" id="sub-total-save"></div>
+      </div>
+    </div>
+    <p class="sub-note-txt">
+      This is an <strong>enquiry</strong> — no payment is taken here. Once we receive your subscription request,
+      our team will contact you to confirm details and collect payment via a secure Razorpay link.
+      Subscriptions are prepaid for 6 months or 1 year. Free delivery within India only.
+      We'll send a reminder 7 days before each renewal.
+    </p>
+    <div class="sub-cta-row">
+      <button class="sub-enq-btn" id="sub-enq-btn" onclick="submitSubEnquiry()" disabled>
+        Request This Subscription →
+      </button>
+    </div>
+  </div>
+</section>
+
 <!-- WHOLESALE / B2B -->
 <section class="section" id="wholesale">
   <div class="sec-head reveal">
@@ -1401,7 +1637,7 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
       </div>
       <div class="fld-row">
         <div class="fld"><label>Business Type</label>
-          <select id="b2b-type"><option>Retailer / Shop</option><option>Restaurant / Hotel</option><option>Distributor</option><option>Gifting / Corporate</option><option>Other</option></select>
+          <select id="b2b-type"><option>Retailer / Shop</option><option>Restaurant / Hotel</option><option>Distributor</option><option>Gifting / Corporate</option><option>Individual Subscription</option><option>Other</option></select>
         </div>
         <div class="fld"><label>Est. Monthly Volume</label>
           <select id="b2b-volume"><option>Under 50 L</option><option>50–200 L</option><option>200–500 L</option><option>500 L+</option></select>
@@ -1413,6 +1649,62 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
     </div>
   </div>
 </section>
+
+
+<!-- REVIEWS -->
+<section class="section" id="reviews">
+  <div class="sec-head center reveal">
+    <div class="eyebrow"><span class="line"></span><span>Verified Purchases</span></div>
+    <h2 class="sec-title">What Customers <em>Say</em></h2>
+    <p class="sec-sub">Reviews from people who ordered and received their oil. Unedited.</p>
+  </div>
+  <div class="rev-grid" id="rev-grid">
+    <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--ink-soft);font-size:.86rem">
+      Loading reviews…
+    </div>
+  </div>
+  <div class="rev-cta">
+    <button class="rev-leave-btn" onclick="openReviewForm()">✍ Leave a Review</button>
+  </div>
+</section>
+
+<!-- REVIEW FORM MODAL -->
+<div class="modal-ov" id="rev-modal" onclick="if(event.target===this)closeReviewForm()">
+  <div class="rev-modal-inner">
+    <h3>Share your experience</h3>
+    <p class="sub">Only people who have received an order can leave a review. We'll match your email to your order before publishing.</p>
+    <div id="rev-form-msg" class="au-msg" style="display:none"></div>
+    <div class="rev-f"><label>Your rating</label>
+      <div class="star-picker" id="star-picker">
+        <span onclick="setRevStar(1)">★</span><span onclick="setRevStar(2)">★</span>
+        <span onclick="setRevStar(3)">★</span><span onclick="setRevStar(4)">★</span>
+        <span onclick="setRevStar(5)">★</span>
+      </div>
+    </div>
+    <div class="rev-f"><label>Which oil?</label>
+      <select id="rev-product">
+        <option value="">— select an oil —</option>
+      </select>
+    </div>
+    <div class="rev-f"><label>Your review</label>
+      <textarea id="rev-text" rows="4" placeholder="What did you think of the oil? How did you use it?"></textarea>
+    </div>
+    <div class="rev-f"><label>Your name (shown publicly)</label>
+      <input type="text" id="rev-name" placeholder="e.g. Priya R.">
+    </div>
+    <div class="rev-f"><label>Your city</label>
+      <input type="text" id="rev-city" placeholder="e.g. Hyderabad">
+    </div>
+    <div class="rev-f"><label>Email (to verify your order — not shown publicly)</label>
+      <input type="email" id="rev-email" placeholder="you@example.com">
+    </div>
+    <button class="rev-submit" onclick="submitReview(this)">Submit Review</button>
+    <div class="rev-pending" id="rev-pending">
+      ✅ Thank you! Your review is pending approval. We'll verify your order and publish it within 24 hours.
+    </div>
+    <button class="au-alt" style="margin-top:10px" onclick="closeReviewForm()">Cancel</button>
+  </div>
+</div>
 
 <!-- TESTIMONIALS -->
 <section class="section" id="testi" style="display:none">
@@ -1464,6 +1756,31 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
     <div class="foot-brand">
       <div class="brand-name" style="color:var(--cream);font-family:'Fraunces',serif;font-size:1.4rem;font-weight:600">Sunsa Organics<small style="display:block;font-family:'Inter',sans-serif;font-size:.54rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-l);font-weight:600;margin-top:3px">Pure Cold Pressed Oils</small></div>
       <p>Six pure cold pressed oils — no chemicals, no heat, no compromise. From Indian farms to your kitchen.</p>
+      <div class="foot-social">
+        <a class="fsoc" href="#" id="soc-instagram" title="Instagram" onclick="return false" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4"/>
+            <circle cx="17.5" cy="6.5" r=".7" fill="currentColor" stroke="none"/>
+          </svg>
+        </a>
+        <a class="fsoc" href="#" id="soc-facebook" title="Facebook" onclick="return false" aria-label="Facebook">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+          </svg>
+        </a>
+        <a class="fsoc" href="#" id="soc-youtube" title="YouTube" onclick="return false" aria-label="YouTube">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.96-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/>
+            <polygon fill="var(--char-2)" points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/>
+          </svg>
+        </a>
+        <a class="fsoc" href="https://wa.me/918019183311" id="soc-whatsapp" title="WhatsApp" aria-label="WhatsApp">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path d="M11.994 0C5.371 0 0 5.373 0 12c0 2.117.554 4.103 1.523 5.828L.057 23.5l5.83-1.495A11.956 11.956 0 0 0 12 24c6.627 0 12-5.373 12-12S18.621 0 11.994 0zm.006 21.818c-1.808 0-3.487-.485-4.936-1.33l-.354-.21-3.664.94.982-3.558-.23-.365A9.79 9.79 0 0 1 2.18 12c0-5.424 4.412-9.836 9.82-9.836 5.41 0 9.826 4.412 9.826 9.836 0 5.423-4.416 9.818-9.826 9.818z"/>
+          </svg>
+        </a>
+      </div>
       <div class="foot-certs"><span class="foot-cert">No Chemicals</span><span class="foot-cert">Lab Tested</span><span class="foot-cert">FSSAI</span></div>
     </div>
     <div class="foot-col">
@@ -1683,12 +2000,23 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
 <!-- ADMIN LOGIN -->
 <div class="admin-login-ov" id="admin-login">
   <div class="al-box">
-    <h2>🔒 Admin Panel</h2>
+    <div class="al-logo">🔒</div>
+    <h2>Admin Panel</h2>
     <div class="als">Sunsa Organics — restricted access</div>
-    <div id="al-err"></div>
-    <input type="email" id="al-email" placeholder="Admin email" autocomplete="off">
-    <input type="password" id="al-pass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="al-btn" onclick="doLogin()">Sign In</button>
+    <div id="al-err" class="al-err-box" style="display:none"></div>
+    <div class="al-google-wrap">
+      <button class="al-google-btn" onclick="doGoogleLogin()">
+        <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          <path fill="none" d="M0 0h48v48H0z"/>
+        </svg>
+        Sign in with Google
+      </button>
+    </div>
+    <p class="al-note">Only Google accounts listed in the<br><strong>/admins</strong> collection can access this panel.</p>
     <button class="al-cancel" onclick="closeLogin()">Cancel</button>
   </div>
 </div>
@@ -1709,6 +2037,7 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
       <div class="adm-nav" id="nav-combos" onclick="admTab('combos')"><span class="ni">🎁</span> Combos & Offers</div>
       <div class="adm-nav" id="nav-gifts" onclick="admTab('gifts')"><span class="ni">🎀</span> Gifting</div>
       <div class="adm-nav" id="nav-content" onclick="admTab('content')"><span class="ni">📝</span> Page Content</div>
+      <div class="adm-nav" id="nav-reviews" onclick="admTab('reviews')"><span class="ni">💬</span> Reviews</div>
       <div class="adm-side-sec">Sales</div>
       <div class="adm-nav" id="nav-sales" onclick="admTab('sales')"><span class="ni">📈</span> Sales &amp; Orders</div>
       <div class="adm-side-sec">Store</div>
@@ -1725,14 +2054,16 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
         <div class="adm-info" style="margin-bottom:18px;border-color:#e0a040">
           <strong style="color:#e0a040">⚠️ Customer accounts are now switched on — three things must be done in Firebase or the site will not work:</strong>
           <div style="margin-top:10px;line-height:1.85">
-            <strong style="color:#c5d0bc">1. Make yourself an admin.</strong> Customers now log in too, so "logged in" no longer means "admin".
-            In Firebase Console → Firestore → create a collection called <code style="color:#8fb573">admins</code>, and add a document whose
-            <strong>Document ID is your Auth UID</strong> (Authentication → Users → copy the UID). Any single field will do, e.g. <code style="color:#8fb573">role: "admin"</code>.
-            <span style="color:#e08080">Until you do this you will not be able to log in here.</span><br><br>
+            <strong style="color:#c5d0bc">1. Make yourself an admin.</strong> The admin panel now uses <strong>Google Sign-In</strong> — no password needed.
+            Sign in once with your Google account via the admin login, then open Firebase Console → Firestore → create a collection called
+            <code style="color:#8fb573">admins</code> → add a document whose <strong>Document ID = your Google Auth UID</strong>
+            (Authentication → Users, find your Google account, copy the UID). Add any field e.g. <code style="color:#8fb573">role: "admin"</code>.
+            Also enable the <strong>Google provider</strong> in Authentication → Sign-in method, and add <code style="color:#8fb573">mani1824.github.io</code>
+            to Authorized Domains. <span style="color:#e08080">Until the UID is in /admins, even you will be rejected.</span><br><br>
             <strong style="color:#c5d0bc">2. Paste the new rules below.</strong> The old ones let any logged-in person edit your products and read every customer's address.<br><br>
             <strong style="color:#c5d0bc">3. For phone OTP:</strong> Authentication → Sign-in method → enable <strong>Phone</strong>, and add your domain
             (<code style="color:#8fb573">mani1824.github.io</code>) under Authorized domains. Phone OTP needs the <strong>Blaze</strong> plan and
-            <strong>each SMS is charged</strong>. Email sign-in works on the free plan — enable <strong>Email/Password</strong> too.
+            <strong>each SMS is charged</strong>. Email sign-in works on the free plan — enable <strong>Email/Password</strong> too. For admin access: enable <strong>Google</strong> provider and add <code style="color:#8fb573">mani1824.github.io</code> to Authorized Domains.
           </div>
         </div>
         <div id="ov-repair" style="display:none;background:rgba(224,160,64,.1);border:1.5px solid #e0a040;border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:.78rem;color:#e0a040;font-weight:700;line-height:1.6">
@@ -1978,6 +2309,19 @@ service cloud.firestore {
           </div>
 
         </div>
+      </div>
+
+      <!-- REVIEWS -->
+      <div class="adm-tab" id="tab-reviews">
+        <div class="adm-h">💬 Customer Reviews
+          <button class="adm-add" onclick="loadAdmReviews()">↺ Refresh</button>
+        </div>
+        <div class="adm-info" style="margin-bottom:14px">
+          Reviews come in as <strong>pending</strong> — approve them to make them public. You can edit the text
+          (to fix typos) or delete spam. The email is shown here so you can verify the customer placed an order —
+          it is <strong>never shown on the site</strong>.
+        </div>
+        <div id="adm-rev-list"><div class="adm-info">Click ↺ Refresh to load reviews.</div></div>
       </div>
 
       <!-- SALES -->
@@ -2247,6 +2591,7 @@ function setCurrency(cur){
   document.getElementById('cur-USD').classList.toggle('on', cur==='USD');
   renderProducts(); renderCombos(); renderGifts(); updateCart();
   buildCountry();      // ₹ locks delivery to India, $ opens the world
+  refreshSubPrices();
 }
 
 // ═══════════════ NAV ═══════════════
@@ -2466,6 +2811,290 @@ function subscribeInterest(){
 }
 
 function renderContent(){ renderTrust(); renderFounder(); renderTesti(); renderSubscribe(); }
+
+
+
+// ═══════════════ SUBSCRIPTION BUILDER ═══════════════
+let subPlan = 'monthly';           // 'monthly' | 'fortnightly'
+let subBasket = {};                // { productId: {qty, size} }
+const SUB_DISC = { monthly: 0.08, fortnightly: 0.12 };
+const SUB_FREQ_LABEL = { monthly: 'per month · 12×/year', fortnightly: 'every 15 days · 24×/year' };
+
+function selectSubPlan(plan){
+  subPlan = plan;
+  document.getElementById('splan-monthly').classList.toggle('sel', plan==='monthly');
+  document.getElementById('splan-fortnightly').classList.toggle('sel', plan==='fortnightly');
+  updateSubSummary();
+}
+
+function renderSubBuilder(){
+  const grid = document.getElementById('sub-oil-grid');
+  if(!grid) return;
+  const list = (products||[]).filter(p=>p && p.active!==false);
+  grid.innerHTML = list.map(p=>{
+    const b = subBasket[p.id] || {qty:0, size:'1L'};
+    const sizes = (p.sizes||[]).map(s=>s.label);
+    const img = mainImg(p);
+    const isActive = b.qty > 0;
+    return `
+    <div class="sub-oil${isActive?' active':''}" id="sub-oil-${p.id}">
+      <div class="sub-oil-top">
+        <div class="sub-oil-em">
+          ${img ? `<img src="${escA(img)}" alt="" loading="lazy" onerror="this.parentElement.textContent='🫗'">` : '🫗'}
+        </div>
+        <div>
+          <div class="sub-oil-name">${esc(p.name)}</div>
+          <div class="sub-oil-price" id="sub-oil-price-${p.id}">${subOilPriceLabel(p, b.size||'1L')}</div>
+        </div>
+      </div>
+      <select class="sub-oil-size" id="sub-oil-size-${p.id}" onchange="subSizeChange(${p.id}, this.value)">
+        ${sizes.map(s=>`<option value="${escA(s)}"${s===b.size?' selected':''}>${esc(s)}</option>`).join('')}
+      </select>
+      <div class="sub-oil-ctrl">
+        <button onclick="subQtyChange(${p.id},-1)" aria-label="decrease">−</button>
+        <div class="sub-oil-qty" id="sub-qty-${p.id}">${b.qty}</div>
+        <button onclick="subQtyChange(${p.id},+1)" aria-label="increase">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function subOilPriceLabel(p, sizeLabel){
+  const s = (p.sizes||[]).find(x=>x.label===sizeLabel) || (p.sizes||[])[0] || {};
+  const base = currency==='USD' ? (s.usd||0) : (s.inr||0);
+  const disc = Math.round(base * (1 - SUB_DISC[subPlan]));
+  if(!base) return '—';
+  return `<span style="text-decoration:line-through;color:var(--ink-soft);font-size:.68rem">${money(base)}</span> `
+       + `<strong>${money(disc)}</strong>/delivery`;
+}
+
+function subQtyChange(id, delta){
+  const b = subBasket[id] || {qty:0, size:'1L'};
+  const sizeEl = document.getElementById('sub-oil-size-'+id);
+  const sz = sizeEl ? sizeEl.value : (b.size||'1L');
+  b.qty = Math.max(0, (b.qty||0)+delta);
+  b.size = sz;
+  subBasket[id] = b;
+  const qEl = document.getElementById('sub-qty-'+id);
+  if(qEl) qEl.textContent = b.qty;
+  const card = document.getElementById('sub-oil-'+id);
+  if(card) card.classList.toggle('active', b.qty>0);
+  updateSubSummary();
+}
+
+function subSizeChange(id, size){
+  const b = subBasket[id] || {qty:0, size};
+  b.size = size;
+  subBasket[id] = b;
+  const p = products.find(x=>x.id===id);
+  const lbl = document.getElementById('sub-oil-price-'+id);
+  if(p && lbl) lbl.innerHTML = subOilPriceLabel(p, size);
+  updateSubSummary();
+}
+
+function updateSubSummary(){
+  const items = Object.entries(subBasket).filter(([,b])=>b.qty>0);
+  const disc = SUB_DISC[subPlan];
+  let total = 0;
+  const lines = items.map(([id, b])=>{
+    const p = products.find(x=>x.id===Number(id));
+    if(!p) return '';
+    const s = (p.sizes||[]).find(x=>x.label===b.size)||(p.sizes||[])[0]||{};
+    const base = currency==='USD' ? (s.usd||0) : (s.inr||0);
+    const line = Math.round(base*(1-disc)) * b.qty;
+    total += line;
+    return `${esc(p.name)} ${esc(b.size)} × ${b.qty} = ${money(line)}`;
+  });
+
+  const iEl = document.getElementById('sub-summary-items');
+  const aEl = document.getElementById('sub-total-amt');
+  const fEl = document.getElementById('sub-total-freq');
+  const sEl = document.getElementById('sub-total-save');
+  const btn = document.getElementById('sub-enq-btn');
+
+  if(!items.length){
+    if(iEl) iEl.innerHTML = '<span style="color:rgba(250,237,205,.4)">Add oils above to see your basket.</span>';
+    if(aEl) aEl.textContent = '—';
+    if(fEl) fEl.textContent = '';
+    if(sEl) sEl.textContent = '';
+    if(btn) btn.disabled = true;
+    return;
+  }
+
+  if(iEl) iEl.innerHTML = lines.join('<br>');
+  if(aEl) aEl.textContent = money(total);
+  if(fEl) fEl.textContent = SUB_FREQ_LABEL[subPlan];
+
+  const origTotal = items.reduce((sum,[id,b])=>{
+    const p=products.find(x=>x.id===Number(id)); if(!p) return sum;
+    const s=(p.sizes||[]).find(x=>x.label===b.size)||(p.sizes||[])[0]||{};
+    return sum + (currency==='USD'?(s.usd||0):(s.inr||0))*b.qty;
+  },0);
+  const saved = origTotal - total;
+  if(sEl) sEl.textContent = saved>0 ? `You save ${money(saved)} per delivery` : '';
+  if(btn) btn.disabled = false;
+}
+
+function submitSubEnquiry(){
+  if(!requireAuth(()=>submitSubEnquiry())) return;
+  const items = Object.entries(subBasket).filter(([,b])=>b.qty>0);
+  if(!items.length){ toast('Please add at least one oil to your basket'); return; }
+
+  // Build a readable message for the wholesale enquiry form
+  const lines = items.map(([id,b])=>{
+    const p=products.find(x=>x.id===Number(id));
+    return (p?p.name:'Oil')+' '+b.size+' × '+b.qty+' bottle'+(b.qty>1?'s':'');
+  });
+  const freq = subPlan==='fortnightly' ? 'Every 15 days' : 'Every month';
+  const disc = Math.round(SUB_DISC[subPlan]*100);
+  const NL='\n';
+  const msg='SUBSCRIPTION ENQUIRY ('+disc+'% off \u2014 '+freq+')'+NL+NL+'Oils requested:'+NL+lines.map(function(l){return '\u2022 '+l;}).join(NL)+NL+NL+'Delivery frequency: '+freq+NL+'Plan: Annual subscription (12 months)'+NL+NL+'Please confirm details and send a payment link.';
+
+  scrollToId('wholesale');
+  setTimeout(()=>{
+    const m = document.getElementById('b2b-message');
+    if(m){ m.value = msg; m.focus(); }
+    const t = document.getElementById('b2b-type');
+    if(t){ for(const o of t.options){ if(/subscription|individual/i.test(o.text)){ t.value=o.value; break; } } }
+    const na = document.getElementById('b2b-name');
+    if(na && me && !na.value){
+      na.value = (meProfile&&meProfile.name)||me.displayName||'';
+    }
+    const em = document.getElementById('b2b-email');
+    if(em && !em.value){ em.value = (me&&me.email)||(meProfile&&meProfile.email)||''; }
+    const ph = document.getElementById('b2b-phone');
+    if(ph && !ph.value){ ph.value = (me&&me.phoneNumber)||(meProfile&&meProfile.phone)||''; }
+    toast('Subscription details filled in below — submit the form to confirm');
+  }, 700);
+}
+
+// Re-render when currency or products change
+function refreshSubPrices(){
+  const list = (products||[]).filter(p=>p&&p.active!==false);
+  list.forEach(p=>{
+    const b = subBasket[p.id]||{qty:0,size:'1L'};
+    const lbl = document.getElementById('sub-oil-price-'+p.id);
+    if(lbl) lbl.innerHTML = subOilPriceLabel(p, b.size||'1L');
+  });
+  updateSubSummary();
+}
+
+// ═══════════════ REVIEWS ═══════════════
+let reviews = [];          // loaded from Firestore /reviews
+let revStarPick = 0;
+
+window.loadReviewsFB = async function(){
+  try{
+    const snap = await db.collection('reviews')
+      .where('approved','==',true)
+      .orderBy('ts','desc')
+      .limit(30)
+      .get();
+    return snap.docs.map(d=>({_id:d.id,...d.data()}));
+  }catch(e){ console.error('reviews load',e); return []; }
+};
+window.saveReviewFB = async function(r){
+  try{ await db.collection('reviews').add(r); return true; }catch(e){ return false; }
+};
+window.approveReviewFB = async function(id, approved){
+  try{ await db.collection('reviews').doc(id).update({approved}); return true; }catch(e){ return false; }
+};
+window.editReviewFB = async function(id, data){
+  try{ await db.collection('reviews').doc(id).update(data); return true; }catch(e){ return false; }
+};
+window.deleteReviewFB = async function(id){
+  try{ await db.collection('reviews').doc(id).delete(); return true; }catch(e){ return false; }
+};
+window.loadAllReviewsFB = async function(){
+  try{
+    const snap = await db.collection('reviews').orderBy('ts','desc').limit(100).get();
+    return snap.docs.map(d=>({_id:d.id,...d.data()}));
+  }catch(e){ return []; }
+};
+
+function renderReviews(){
+  const grid = document.getElementById('rev-grid');
+  if(!grid) return;
+  if(!reviews.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:36px;color:var(--ink-soft)">'
+      +'<div style="font-size:2rem;margin-bottom:8px">💬</div>No reviews yet — be the first.</div>';
+    return;
+  }
+  grid.innerHTML = reviews.map(r=>{
+    const stars = [1,2,3,4,5].map(n=>`<div class="rev-star${n<=(r.stars||5)?' on':''}">★</div>`).join('');
+    const init = (r.name||'?').trim().charAt(0).toUpperCase();
+    return `
+    <div class="rev-card reveal">
+      <div class="rev-stars">${stars}</div>
+      <div class="rev-quote">${esc(r.text||'')}</div>
+      <div class="rev-who">
+        <div class="rev-av">${esc(init)}</div>
+        <div>
+          <div class="rev-name">${esc(r.name||'')}</div>
+          <div class="rev-meta">${esc(r.city||'')}${r.city&&r.product?' · ':''}</div>
+          ${r.product?`<div class="rev-product">${esc(r.product)}</div>`:''}
+          <div class="rev-verified">✅ Verified purchase</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  observeReveals();
+}
+
+// ── Review form ──
+function openReviewForm(){
+  if(!requireAuth(()=>openReviewForm())) return;
+  const sel = document.getElementById('rev-product');
+  if(sel){
+    sel.innerHTML = '<option value="">— select an oil —</option>'
+      + products.filter(p=>p.active!==false).map(p=>`<option value="${escA(p.name)}">${esc(p.name)}</option>`).join('');
+  }
+  revStarPick = 0; updateStarPicker();
+  document.getElementById('rev-text').value='';
+  document.getElementById('rev-name').value = (meProfile&&meProfile.name)||'';
+  document.getElementById('rev-city').value = (meProfile&&meProfile.city)||'';
+  document.getElementById('rev-email').value = (me&&me.email)||(meProfile&&meProfile.email)||'';
+  document.getElementById('rev-form-msg').style.display='none';
+  document.getElementById('rev-pending').style.display='none';
+  document.getElementById('rev-modal').classList.add('open');
+}
+function closeReviewForm(){ document.getElementById('rev-modal').classList.remove('open'); }
+function setRevStar(n){ revStarPick=n; updateStarPicker(); }
+function updateStarPicker(){
+  const stars = document.querySelectorAll('#star-picker span');
+  stars.forEach((s,i)=>{ s.classList.toggle('on', i<revStarPick); });
+}
+async function submitReview(btn){
+  const text = document.getElementById('rev-text').value.trim();
+  const name = document.getElementById('rev-name').value.trim();
+  const email = document.getElementById('rev-email').value.trim();
+  const city = document.getElementById('rev-city').value.trim();
+  const product = document.getElementById('rev-product').value;
+  const msg = document.getElementById('rev-form-msg');
+  const show = (t,k)=>{ msg.textContent=t; msg.className='au-msg '+(k||'err'); msg.style.display='block'; };
+  if(!revStarPick) return show('Please pick a star rating.');
+  if(!text || text.length<15) return show('Please write at least 15 characters.');
+  if(!name) return show('Please enter your name.');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return show('Please enter a valid email.');
+  btn.disabled=true; btn.textContent='Submitting…';
+  const r = { text, name, city, product, email, stars:revStarPick,
+               uid: me?me.uid:null, ts:Date.now(), approved:false };
+  const ok = await window.saveReviewFB(r);
+  if(ok){
+    document.getElementById('rev-pending').style.display='block';
+    msg.style.display='none';
+    btn.style.display='none';
+  } else {
+    show('Could not submit right now. Please try again.');
+    btn.disabled=false; btn.textContent='Submit Review';
+  }
+}
+
+// ── Load reviews on init ──
+(async()=>{
+  reviews = await window.loadReviewsFB();
+  renderReviews();
+})();
 
 // ═══════════════ RENDER GIFTS ═══════════════
 function renderGifts(){
@@ -3391,7 +4020,7 @@ function normalizeProduct(p){
 function needsRepair(){ return (products||[]).filter(p=>p._repaired).length; }
 
 // ═══════════════ FIREBASE SYNC SETTERS ═══════════════
-window.__setProducts = function(arr){ products = (arr||[]).map(normalizeProduct); renderUsage(); renderProducts(); if(admOpen()&&!editing()) buildAdmProducts(); refreshStats(); };
+window.__setProducts = function(arr){ products = (arr||[]).map(normalizeProduct); renderUsage(); renderSubBuilder(); renderProducts(); if(admOpen()&&!editing()) buildAdmProducts(); refreshStats(); };
 window.__setCombos = function(arr){ if(Array.isArray(arr)&&arr.length) combos=arr; renderCombos(); if(admOpen()&&!editing()) buildAdmCombos(); refreshStats(); };
 window.__setStore = function(d){ store={...store,...d}; updateCart(); if(admOpen()&&!editing()){buildAdmStore();buildAdmCoupons();} refreshStats(); };
 window.__setGifts = function(arr){ if(Array.isArray(arr)&&arr.length) combos=arr; renderGifts(); if(admOpen()&&!editing()) buildAdmGifts(); refreshStats(); };
@@ -3432,6 +4061,7 @@ function admTab(name){
     else if(name==='combos') buildAdmCombos();
     else if(name==='gifts') buildAdmGifts();
     else if(name==='content') buildContentForm();
+    else if(name==='reviews') loadAdmReviews();
     else if(name==='store') buildAdmStore();
     else if(name==='coupons') buildAdmCoupons();
     else if(name==='b2b') buildB2BInputs();
@@ -3825,6 +4455,7 @@ async function saveCombo(id, btn){
   renderGifts();
   renderUsage();
   renderContent();
+  renderSubBuilder();
   const ok=await window.saveComboFB(c);
   flashSaved(btn, ok, 'Updated');
   toast(ok?('✅ "'+c.name+'" updated — live on the site'):saveMsg(false,'Combo'));
@@ -4055,6 +4686,72 @@ async function saveContent(btn){
   const ok = await window.saveSettingFB('content', content);
   flashSaved(btn, ok, 'Saved');
   toast(ok ? '✅ Content saved — live on the site' : saveMsg(false,'Content'));
+}
+
+
+// ═══════════════ ADMIN: REVIEWS ═══════════════
+async function loadAdmReviews(){
+  const list = document.getElementById('adm-rev-list');
+  list.innerHTML = '<div class="adm-info">Loading…</div>';
+  const all = await window.loadAllReviewsFB();
+  if(!all.length){ list.innerHTML='<div class="adm-info">No reviews yet.</div>'; return; }
+  const pending = all.filter(r=>!r.approved);
+  const approved = all.filter(r=>r.approved);
+  list.innerHTML =
+    (pending.length ? `<div class="adm-side-sec" style="margin-bottom:10px">⏳ Pending (${pending.length})</div>` : '')
+    + pending.map(r=>revAdmCard(r)).join('')
+    + (approved.length ? `<div class="adm-side-sec" style="margin:16px 0 10px">✅ Published (${approved.length})</div>` : '')
+    + approved.map(r=>revAdmCard(r)).join('');
+}
+function revAdmCard(r){
+  const stars='★'.repeat(r.stars||5)+'☆'.repeat(5-(r.stars||5));
+  return `<div class="adm-card" id="radc-${esc(r._id)}" style="margin-bottom:12px">
+    <div class="adm-card-top">
+      <div class="adm-ic">${r.approved?'✅':'⏳'}</div>
+      <div style="flex:1">
+        <div class="adm-card-name">${esc(r.name||'—')}</div>
+        <div class="adm-card-sub" style="color:var(--gold-l)">${stars}</div>
+      </div>
+      <label class="toggle" title="Approve / Hide">
+        <input type="checkbox" ${r.approved?'checked':''} onchange="toggleRevApprove('${escA(r._id)}',this.checked)">
+        <div class="tr"></div>
+      </label>
+    </div>
+    <div class="af"><label>Review text (editable)</label>
+      <textarea id="rt-${esc(r._id)}" style="min-height:80px">${esc(r.text||'')}</textarea></div>
+    <div class="af-row">
+      <div class="af"><label>Name</label><input id="rn-${esc(r._id)}" value="${escA(r.name||'')}"></div>
+      <div class="af"><label>City</label><input id="rc-${esc(r._id)}" value="${escA(r.city||'')}"></div>
+    </div>
+    <div class="af" style="font-size:.68rem;color:#6a7a60;margin-bottom:10px">
+      📧 ${esc(r.email||'—')} · 🛒 ${esc(r.product||'—')} · ${r.ts?new Date(r.ts).toLocaleDateString():'—'}
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="adm-save" style="flex:3" onclick="saveAdmReview('${escA(r._id)}',this)">💾 Save edits</button>
+      <button class="adm-del" style="flex:1" onclick="deleteAdmReview('${escA(r._id)}')">🗑</button>
+    </div>
+  </div>`;
+}
+async function toggleRevApprove(id, approved){
+  await window.approveReviewFB(id, approved);
+  toast(approved ? '✅ Review published' : '✅ Review hidden');
+  await loadAdmReviews();
+  reviews = await window.loadReviewsFB(); renderReviews();
+}
+async function saveAdmReview(id, btn){
+  const text = document.getElementById('rt-'+id)?.value.trim();
+  const name = document.getElementById('rn-'+id)?.value.trim();
+  const city = document.getElementById('rc-'+id)?.value.trim();
+  const ok = await window.editReviewFB(id, {text, name, city});
+  flashSaved(btn, ok, 'Saved');
+  if(ok){ reviews = await window.loadReviewsFB(); renderReviews(); }
+}
+async function deleteAdmReview(id){
+  if(!confirm('Delete this review? It cannot be recovered.')) return;
+  await window.deleteReviewFB(id);
+  toast('🗑 Review deleted');
+  await loadAdmReviews();
+  reviews = await window.loadReviewsFB(); renderReviews();
 }
 
 // ═══════════════ ADMIN: STORE ═══════════════
@@ -4527,7 +5224,7 @@ function loadCache(){
 
   // Close product modal on Escape
   document.addEventListener('keydown', e=>{
-    if(e.key==='Escape'){ closePD(); closeCart(); closeCheckout(); closeOK(); closeAuth(); closeMyOrders(); closeAcct(); }
+    if(e.key==='Escape'){ closePD(); closeCart(); closeCheckout(); closeOK(); closeAuth(); closeMyOrders(); closeAcct(); closeReviewForm(); }
   });
 
   // Hide loader
