@@ -328,8 +328,6 @@ img{max-width:100%;display:block;}
 #loader.hide{opacity:0;pointer-events:none;}
 
 /* The horizontal centre line */
-.ld-line{position:absolute;top:50%;left:0;right:0;height:1.5px;
-  background:rgba(215,165,42,.18);transform:translateY(-50%);}
 
 /* Drop itself — falls from -100px to 50vh */
 .ld-drop{position:absolute;left:50%;top:0;transform:translateX(-50%);
@@ -520,8 +518,8 @@ header{position:fixed;top:0;left:0;right:0;height:70px;z-index:900;
 .ticker-item .d{display:none;}
 
 /* ─── SECTION SHELL ─── */
-.section{padding:clamp(70px,9vw,120px) clamp(20px,5vw,60px);max-width:1300px;margin:0 auto;}
-.sec-head{margin-bottom:56px;}
+.section{padding:clamp(46px,6vw,84px) clamp(20px,5vw,60px);max-width:1300px;margin:0 auto;}
+.sec-head{margin-bottom:40px;}
 .sec-head.center{text-align:center;margin-left:auto;margin-right:auto;max-width:640px;}
 .eyebrow{display:inline-flex;align-items:center;gap:9px;margin-bottom:14px;}
 .eyebrow .line{width:26px;height:2px;background:var(--gold);border-radius:2px;}
@@ -1306,8 +1304,6 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
 
 <!-- LOADER -->
 <div id="loader">
-  <div class="ld-line"></div>
-
   <!-- The drop -->
   <div class="ld-drop" id="ld-drop">
     <svg viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -1434,11 +1430,6 @@ footer{background:var(--char-2);color:rgba(250,237,205,.45);padding:60px clamp(2
     <button class="starter-btn" onclick="scrollToId('combos')">See the Starter Pack →</button>
   </div>
   <div class="use-grid" id="use-grid"></div>
-  <p class="use-note reveal">
-    <strong>Why some numbers look low:</strong> refining raises an oil's smoke point — that's the main reason it's done.
-    Our oils aren't refined, so several of them aren't suited to deep frying. That's the honest trade for keeping
-    the nutrients and flavour in. Figures are typical for unrefined oil and vary a little batch to batch.
-  </p>
 </section>
 
 <!-- WHY -->
